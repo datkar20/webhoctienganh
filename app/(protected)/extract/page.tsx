@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { addDoc, collection, getDocs, serverTimestamp } from "firebase/firestore";
-import { Loader2, Save, Wand2 } from "lucide-react";
+import { ImagePlus, Loader2, Save, Wand2, X } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -29,6 +30,10 @@ export default function ExtractPage() {
   const [topicId, setTopicId] = useState("");
   const { vocabulary } = useVocabulary(user?.uid, topicId);
   const [text, setText] = useState("");
+  const [imagePreview, setImagePreview] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrLoading, setOcrLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<ExtractedVocabulary[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -41,6 +46,12 @@ export default function ExtractPage() {
   useEffect(() => {
     if (!topicId && topics.length > 0) setTopicId(topics[0].id);
   }, [topicId, topics]);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
 
   const selectedTopic = topics.find((topic) => topic.id === topicId);
   const selectedCount = useMemo(() => suggestions.filter((item) => item.selected && !item.exists).length, [suggestions]);
@@ -56,6 +67,62 @@ export default function ExtractPage() {
     );
     setSuggestions(result);
     toast.success(`Found ${result.length} candidate words`);
+  }
+
+  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+
+    setImageFile(file);
+    setOcrProgress(0);
+    setImagePreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return URL.createObjectURL(file);
+    });
+  }
+
+  function clearImage() {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview("");
+    setImageFile(null);
+    setOcrProgress(0);
+  }
+
+  async function handleExtractFromImage() {
+    if (!imageFile) {
+      toast.error("Choose an image first");
+      return;
+    }
+
+    setOcrLoading(true);
+    setOcrProgress(0);
+    try {
+      const { createWorker } = await import("tesseract.js");
+      const worker = await createWorker("eng", 1, {
+        logger: (message) => {
+          if (message.status === "recognizing text") {
+            setOcrProgress(Math.round(message.progress * 100));
+          }
+        }
+      });
+      const result = await worker.recognize(imageFile);
+      await worker.terminate();
+      const extractedText = result.data.text.trim();
+      if (!extractedText) {
+        toast.error("Could not find readable English text in this image");
+        return;
+      }
+      setText((current) => (current.trim() ? `${current.trim()}\n\n${extractedText}` : extractedText));
+      toast.success("Image text extracted. You can now filter vocabulary.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not extract text from image");
+    } finally {
+      setOcrLoading(false);
+    }
   }
 
   function updateSuggestion(word: string, patch: Partial<ExtractedVocabulary>) {
@@ -159,7 +226,7 @@ export default function ExtractPage() {
           <Card>
             <CardHeader>
               <CardTitle>Source Text</CardTitle>
-              <CardDescription>Words shorter than four characters and common stop words are removed.</CardDescription>
+              <CardDescription>Paste English text or upload an image containing English text.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-[260px_1fr]">
@@ -172,6 +239,9 @@ export default function ExtractPage() {
                       </option>
                     ))}
                   </Select>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
+                    Selected topic decides where new extracted words are saved and which existing words are considered duplicates.
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="text">English paragraph</Label>
@@ -184,6 +254,45 @@ export default function ExtractPage() {
                   />
                 </div>
               </div>
+
+              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="image">Image vocabulary filter</Label>
+                    <div className="flex flex-wrap gap-2">
+                      <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-50">
+                        <ImagePlus className="h-4 w-4" />
+                        Choose image
+                        <input id="image" type="file" accept="image/*" onChange={handleImageChange} className="sr-only" />
+                      </label>
+                      <Button type="button" onClick={handleExtractFromImage} disabled={!imageFile || ocrLoading}>
+                        {ocrLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                        {ocrLoading ? `Reading image ${ocrProgress}%` : "Extract text from image"}
+                      </Button>
+                      {imageFile ? (
+                        <Button type="button" variant="ghost" onClick={clearImage} disabled={ocrLoading}>
+                          <X className="h-4 w-4" />
+                          Remove
+                        </Button>
+                      ) : null}
+                    </div>
+                    <p className="text-xs leading-5 text-slate-500">
+                      Best for screenshots, textbook pages, flashcards, or photos with clear English text. The recognized text is added to the paragraph box above.
+                    </p>
+                    {ocrLoading ? (
+                      <div className="h-2 overflow-hidden rounded-full bg-white">
+                        <div className="h-full rounded-full bg-teal-500 transition-all" style={{ width: `${ocrProgress}%` }} />
+                      </div>
+                    ) : null}
+                  </div>
+                  {imagePreview ? (
+                    <div className="relative h-40 w-full overflow-hidden rounded-lg border border-slate-200 bg-white lg:w-56">
+                      <Image src={imagePreview} alt="Uploaded vocabulary source" fill className="object-cover" unoptimized />
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
               <div className="flex flex-wrap gap-2">
                 <Button onClick={handleExtract}>
                   <Wand2 className="h-4 w-4" />
