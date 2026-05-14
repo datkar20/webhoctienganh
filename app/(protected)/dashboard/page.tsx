@@ -5,6 +5,7 @@ import { BookOpenCheck, Brain, CalendarClock, Database, Dumbbell, Loader2, Shiel
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useLanguage } from "@/components/i18n/language-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -12,10 +13,12 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { Progress } from "@/components/ui/progress";
 import { createDemoData } from "@/lib/demo-data";
 import { useAllVocabulary, useQuizAttempts, useTopics } from "@/lib/firestore-hooks";
-import { formatDate, isDueToday, percent, quizTypeLabel } from "@/lib/utils";
+import { vocabularyProgressPercent } from "@/lib/progress";
+import { formatDate, isDueToday, quizTypeLabel } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { topics, loading: topicsLoading } = useTopics(user?.uid);
   const { vocabulary, loading: vocabularyLoading } = useAllVocabulary(user?.uid, topics);
   const { attempts, loading: attemptsLoading } = useQuizAttempts(user?.uid, 5);
@@ -56,41 +59,41 @@ export default function DashboardPage() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <p className="text-sm font-medium text-teal-700">VocabVault</p>
-          <h1 className="text-2xl font-bold text-slate-950">Dashboard</h1>
-          <p className="text-sm text-slate-500">Track your topics, review queue, and recent quiz activity.</p>
+          <h1 className="text-2xl font-bold text-slate-950">{t("dashboardTitle")}</h1>
+          <p className="text-sm text-slate-500">{t("dashboardSubtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
-            <Link href="/topics">Manage topics</Link>
+            <Link href="/topics">{t("manageTopics")}</Link>
           </Button>
           <Button onClick={handleCreateDemoData} disabled={creatingDemo}>
             {creatingDemo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-            Create demo data
+            {t("createDemoData")}
           </Button>
         </div>
       </div>
 
       {loading ? (
-        <LoadingState label="Loading dashboard..." />
+        <LoadingState label={t("loadingDashboard")} />
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-            <StatCard title="Topics" value={stats.topicCount} icon={<BookOpenCheck className="h-5 w-5" />} />
-            <StatCard title="Words" value={stats.totalWords} icon={<Brain className="h-5 w-5" />} />
-            <StatCard title="Mastered" value={stats.mastered} icon={<BookOpenCheck className="h-5 w-5" />} />
-            <StatCard title="Learning" value={stats.learning} icon={<Dumbbell className="h-5 w-5" />} />
-            <StatCard title="Weak" value={stats.weak} icon={<ShieldAlert className="h-5 w-5" />} />
-            <StatCard title="Review today" value={stats.due} icon={<CalendarClock className="h-5 w-5" />} />
+            <StatCard title={t("topicsTitle")} value={stats.topicCount} icon={<BookOpenCheck className="h-5 w-5" />} />
+            <StatCard title={t("words")} value={stats.totalWords} icon={<Brain className="h-5 w-5" />} />
+            <StatCard title={t("mastered")} value={stats.mastered} icon={<BookOpenCheck className="h-5 w-5" />} />
+            <StatCard title={t("learning")} value={stats.learning} icon={<Dumbbell className="h-5 w-5" />} />
+            <StatCard title={t("weak")} value={stats.weak} icon={<ShieldAlert className="h-5 w-5" />} />
+            <StatCard title={t("reviewToday")} value={stats.due} icon={<CalendarClock className="h-5 w-5" />} />
           </div>
 
           {stats.totalWords === 0 ? (
             <EmptyState
-              title="No vocabulary yet"
-              description="Create a topic and add words manually, extract from text, or generate demo data to explore the app."
+              title={t("noVocabularyYet")}
+              description={t("noVocabularyYetDesc")}
               action={
                 <Button onClick={handleCreateDemoData} disabled={creatingDemo}>
                   {creatingDemo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-                  Create demo data
+                  {t("createDemoData")}
                 </Button>
               }
             />
@@ -99,20 +102,19 @@ export default function DashboardPage() {
           <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
             <Card>
               <CardHeader>
-                <CardTitle>Topic Progress</CardTitle>
-                <CardDescription>Mastered percentage by topic.</CardDescription>
+                <CardTitle>{t("topicProgress")}</CardTitle>
+                <CardDescription>{t("topicProgressDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {topics.length === 0 ? (
                   <EmptyState
-                    title="No topics"
-                    description="Topics group your words by theme, exam goal, or personal learning plan."
+                    title={t("noTopics")}
+                    description={t("noTopicsDesc")}
                   />
                 ) : (
                   topics.slice(0, 6).map((topic) => {
                     const topicWords = vocabulary.filter((item) => item.topicId === topic.id);
-                    const mastered = topicWords.filter((item) => item.masteryLevel === "mastered").length;
-                    const progress = percent(mastered, topicWords.length);
+                    const progress = vocabularyProgressPercent(topicWords);
                     return (
                       <div key={topic.id} className="space-y-2">
                         <div className="flex items-center justify-between gap-3 text-sm">
@@ -131,19 +133,19 @@ export default function DashboardPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Recent Quizzes</CardTitle>
-                <CardDescription>Your latest saved attempts.</CardDescription>
+                <CardTitle>{t("recentQuizzes")}</CardTitle>
+                <CardDescription>{t("recentQuizzesDesc")}</CardDescription>
               </CardHeader>
               <CardContent>
                 {attemptsLoading ? (
-                  <LoadingState label="Loading attempts..." className="min-h-32" />
+                  <LoadingState label={t("loadingAttempts")} className="min-h-32" />
                 ) : attempts.length === 0 ? (
                   <EmptyState
-                    title="No quiz attempts"
-                    description="Practice a topic to save score, questions, and wrong answers."
+                    title={t("noQuizAttempts")}
+                    description={t("noQuizAttemptsDesc")}
                     action={
                       <Button variant="outline" asChild>
-                        <Link href="/practice">Start practice</Link>
+                        <Link href="/practice">{t("startPractice")}</Link>
                       </Button>
                     }
                   />

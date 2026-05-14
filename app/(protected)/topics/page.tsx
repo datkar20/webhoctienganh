@@ -13,14 +13,16 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { Progress } from "@/components/ui/progress";
+import { useLanguage } from "@/components/i18n/language-provider";
 import { useAuth } from "@/components/auth/auth-provider";
 import { db } from "@/lib/firebase";
 import { useAllVocabulary, useTopics } from "@/lib/firestore-hooks";
-import { percent } from "@/lib/utils";
+import { vocabularyProgressPercent } from "@/lib/progress";
 import type { Topic } from "@/types";
 
 export default function TopicsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { topics, loading: topicsLoading, error: topicsError } = useTopics(user?.uid);
   const { vocabulary, loading: vocabularyLoading } = useAllVocabulary(user?.uid, topics);
   const [formOpen, setFormOpen] = useState(false);
@@ -35,7 +37,7 @@ export default function TopicsPage() {
       acc[topic.id] = {
         words: words.length,
         mastered,
-        progress: percent(mastered, words.length)
+        progress: vocabularyProgressPercent(words)
       };
       return acc;
     }, {});
@@ -77,35 +79,35 @@ export default function TopicsPage() {
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-950">Topics</h1>
-          <p className="text-sm text-slate-500">Create custom English learning areas and manage their words.</p>
+          <h1 className="text-2xl font-bold text-slate-950">{t("topicsTitle")}</h1>
+          <p className="text-sm text-slate-500">{t("topicsSubtitle")}</p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" />
-          New topic
+          {t("newTopic")}
         </Button>
       </div>
 
       {topicsError ? (
         <EmptyState
-          title="Could not load topics"
+          title={t("couldNotLoadTopics")}
           description={topicsError.message}
           action={
             <Button type="button" variant="outline" onClick={() => window.location.reload()}>
-              Retry
+              {t("retry")}
             </Button>
           }
         />
       ) : loading ? (
-        <LoadingState label="Loading topics..." />
+        <LoadingState label={t("loadingTopics")} />
       ) : topics.length === 0 ? (
         <EmptyState
-          title="No topics yet"
-          description="Start with Health, Education, IELTS, TOEIC, or any custom theme you want to master."
+          title={t("noTopicsYet")}
+          description={t("noTopicsYetDesc")}
           action={
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
-              Create topic
+              {t("createTopic")}
             </Button>
           }
         />
@@ -127,7 +129,7 @@ export default function TopicsPage() {
                       </div>
                       <div>
                         <CardTitle>{topic.name}</CardTitle>
-                        <CardDescription>{stats.words} words</CardDescription>
+                        <CardDescription>{stats.words} {t("words")}</CardDescription>
                       </div>
                     </div>
                     <div className="flex gap-1">
@@ -147,11 +149,11 @@ export default function TopicsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="min-h-10 text-sm text-slate-500">{topic.description || "No description yet."}</p>
+                  <p className="min-h-10 text-sm text-slate-500">{topic.description || t("noDescriptionYet")}</p>
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs text-slate-500">
-                      <span>Progress</span>
-                      <span>{stats.progress}% mastered</span>
+                      <span>{t("progress")}</span>
+                      <span>{stats.progress}% {t("learned")}</span>
                     </div>
                     <Progress value={stats.progress} />
                   </div>
@@ -160,13 +162,13 @@ export default function TopicsPage() {
                   <Button variant="outline" className="flex-1" asChild>
                     <Link href={`/topics/${topic.id}`}>
                       <Eye className="h-4 w-4" />
-                      View words
+                      {t("viewWords")}
                     </Link>
                   </Button>
                   <Button className="flex-1" asChild>
                     <Link href={`/practice?topicId=${topic.id}`}>
                       <Dumbbell className="h-4 w-4" />
-                      Practice
+                      {t("practice")}
                     </Link>
                   </Button>
                 </CardFooter>
@@ -181,9 +183,9 @@ export default function TopicsPage() {
       ) : null}
       <ConfirmDialog
         open={Boolean(deletingTopic)}
-        title="Delete topic"
+        title={t("deleteTopic")}
         description={`Delete "${deletingTopic?.name ?? "this topic"}" and all words inside it?`}
-        confirmText="Delete topic"
+        confirmText={t("deleteTopic")}
         loading={deleting}
         onCancel={() => setDeletingTopic(null)}
         onConfirm={confirmDelete}

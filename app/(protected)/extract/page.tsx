@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useLanguage } from "@/components/i18n/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,7 @@ const sampleText =
 
 export default function ExtractPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { topics, loading: topicsLoading, error: topicsError } = useTopics(user?.uid);
   const [topicId, setTopicId] = useState("");
   const { vocabulary } = useVocabulary(user?.uid, topicId);
@@ -200,15 +202,15 @@ export default function ExtractPage() {
     }
   }
 
-  if (topicsLoading) return <LoadingState label="Loading topics..." />;
+  if (topicsLoading) return <LoadingState label={t("loadingTopics")} />;
   if (topicsError) {
     return (
       <EmptyState
-        title="Could not load topics"
+        title={t("couldNotLoadTopics")}
         description={topicsError.message}
         action={
           <Button type="button" variant="outline" onClick={() => window.location.reload()}>
-            Retry
+            {t("retry")}
           </Button>
         }
       />
@@ -219,11 +221,11 @@ export default function ExtractPage() {
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-950">Extract Vocabulary</h1>
-          <p className="text-sm text-slate-500">Paste English text, remove stop words, and save important words to a topic.</p>
+          <h1 className="text-2xl font-bold text-slate-950">{t("extractTitle")}</h1>
+          <p className="text-sm text-slate-500">{t("extractSubtitle")}</p>
         </div>
         <Button variant="outline" asChild>
-          <Link href="/topics">Manage topics</Link>
+          <Link href="/topics">{t("manageTopics")}</Link>
         </Button>
       </div>
 

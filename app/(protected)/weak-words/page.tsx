@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Dumbbell, ShieldAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useLanguage } from "@/components/i18n/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { formatDate } from "@/lib/utils";
 
 export default function WeakWordsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { topics, loading: topicsLoading } = useTopics(user?.uid);
   const { vocabulary, loading: vocabularyLoading } = useAllVocabulary(user?.uid, topics);
   const [topicId, setTopicId] = useState("all");
@@ -37,14 +39,14 @@ export default function WeakWordsPage() {
             .join(",")}`
         : "/practice";
 
-  if (topicsLoading || vocabularyLoading) return <LoadingState label="Loading weak words..." />;
+  if (topicsLoading || vocabularyLoading) return <LoadingState label={t("loadingVocabulary")} />;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-950">Weak Words</h1>
-          <p className="text-sm text-slate-500">Words marked weak or with a high wrong count.</p>
+          <h1 className="text-2xl font-bold text-slate-950">{t("weakWordsPageTitle")}</h1>
+          <p className="text-sm text-slate-500">{t("weakWordsSubtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Select value={topicId} onChange={(event) => setTopicId(event.target.value)} className="w-56">

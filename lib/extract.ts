@@ -8,20 +8,26 @@ function stableImageLock(value: string) {
 
 export function suggestVocabularyImageUrl(word: string, partOfSpeech = "", topic = "") {
   const pos = partOfSpeech.toLowerCase();
-  const topicKeyword = topic.toLowerCase().replace(/\s+/g, "-");
+  const topicKeyword = topic.toLowerCase();
   const visualHint = pos.includes("verb")
-    ? "person,action"
+    ? "a person clearly doing the action"
     : pos.includes("adjective")
-      ? "concept"
+      ? "a simple visual scene showing the quality"
       : pos.includes("adverb")
-        ? "motion"
-        : "object";
-  const keywords = [word.toLowerCase(), topicKeyword, visualHint]
+        ? "movement in a realistic scene"
+        : "the object or concept as the main subject";
+  const prompt = [
+    "realistic educational vocabulary illustration",
+    `English vocabulary word: ${word.toLowerCase()}`,
+    topicKeyword ? `topic: ${topicKeyword}` : "",
+    partOfSpeech ? `part of speech: ${partOfSpeech}` : "",
+    visualHint,
+    "single clear subject, natural lighting, no text, no watermark"
+  ]
     .filter(Boolean)
-    .join(",")
-    .replace(/\s+/g, "-");
+    .join(", ");
 
-  return `https://loremflickr.com/640/420/${encodeURIComponent(keywords)}?lock=${stableImageLock(`${word}-${partOfSpeech}-${topic}`)}`;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=640&height=420&nologo=true&seed=${stableImageLock(`${word}-${partOfSpeech}-${topic}`)}`;
 }
 
 export function extractVocabularyFromText(text: string, existingWords: string[] = []): ExtractedVocabulary[] {

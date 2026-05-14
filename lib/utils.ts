@@ -55,6 +55,7 @@ export function quizTypeLabel(type: QuizType) {
     "en-to-vi-type": "Type Vietnamese meaning",
     "vi-to-en-type": "Type English word",
     "fill-blank": "Fill in blank",
+    "sentence-writing": "Write a sentence",
     flashcard: "Flashcard",
     mixed: "Random smart mix"
   };

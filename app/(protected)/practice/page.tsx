@@ -35,11 +35,10 @@ const quizTypes: QuizType[] = [
   "en-to-vi-type",
   "vi-to-en-type",
   "fill-blank",
+  "sentence-writing",
   "flashcard",
   "mixed"
 ];
-
-type QuestionPlan = "auto" | "once" | "twice" | "triple";
 
 export default function PracticePage() {
   const router = useRouter();
@@ -47,8 +46,7 @@ export default function PracticePage() {
   const { language, t } = useLanguage();
   const { topics, loading: topicsLoading, error: topicsError } = useTopics(user?.uid);
   const [topicId, setTopicId] = useState("");
-  const [quizType, setQuizType] = useState<QuizType>("en-to-vi-choice");
-  const [questionPlan, setQuestionPlan] = useState<QuestionPlan>("auto");
+  const [quizType, setQuizType] = useState<QuizType>("mixed");
   const [retryWordIds, setRetryWordIds] = useState<string[]>([]);
   const { vocabulary, loading: vocabularyLoading } = useVocabulary(user?.uid, topicId);
   const [questions, setQuestions] = useState<LocalQuizQuestion[]>([]);
@@ -86,14 +84,10 @@ export default function PracticePage() {
   const plannedQuestionCount = useMemo(() => {
     const total = availableVocabulary.length;
     if (total === 0) return 0;
-    const rounds =
-      questionPlan === "once" ? 1 :
-      questionPlan === "twice" ? 2 :
-      questionPlan === "triple" ? 3 :
-      retryWordIds.length > 0 ? 3 : 2;
+    const rounds = retryWordIds.length > 0 ? 3 : 1;
     const base = total * rounds;
     return quizType === "mixed" ? base * 2 : base;
-  }, [availableVocabulary.length, questionPlan, quizType, retryWordIds.length]);
+  }, [availableVocabulary.length, quizType, retryWordIds.length]);
 
   function startQuiz() {
     if (!topicId) {
@@ -276,7 +270,7 @@ export default function PracticePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="topic">{t("topic")}</Label>
                 <Select id="topic" value={topicId} onChange={(event) => setTopicId(event.target.value)}>
@@ -296,16 +290,7 @@ export default function PracticePage() {
                     </option>
                   ))}
                 </Select>
-                {quizType === "mixed" ? <p className="text-xs leading-5 text-slate-500">{t("randomHint")}</p> : null}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="count">{t("questions")}</Label>
-                <Select id="count" value={questionPlan} onChange={(event) => setQuestionPlan(event.target.value as QuestionPlan)}>
-                  <option value="auto">{t("autoQuestions")}</option>
-                  <option value="once">{t("allWordsOnce")}</option>
-                  <option value="twice">{t("twoRounds")}</option>
-                  <option value="triple">{t("threeRounds")}</option>
-                </Select>
+                <p className="text-xs leading-5 text-slate-500">{quizType === "mixed" ? t("randomHint") : t("autoQuestionHint")}</p>
               </div>
             </div>
             {vocabularyLoading ? (
@@ -502,7 +487,13 @@ function QuestionView({
               if (value && !disabled) onChoiceAnswer(value);
             }
           }}
-          placeholder={question.questionType === "en-to-vi-type" ? t("typeVi") : t("typeEn")}
+          placeholder={
+            question.questionType === "sentence-writing"
+              ? t("writeSentencePlaceholder")
+              : question.questionType === "en-to-vi-type"
+                ? t("typeVi")
+                : t("typeEn")
+          }
         />
       </div>
     </div>
@@ -524,7 +515,9 @@ function Prompt({ question, t }: { question: LocalQuizQuestion; t?: (key: Parame
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-6">
       <p className="text-sm font-medium text-slate-500">
-        {question.questionType === "en-to-vi-type" || question.questionType === "en-to-vi-choice"
+        {question.questionType === "sentence-writing"
+          ? translate("writeSentence")
+          : question.questionType === "en-to-vi-type" || question.questionType === "en-to-vi-choice"
           ? translate(question.questionType === "en-to-vi-choice" ? "chooseVi" : "typeVi")
           : question.questionType === "fill-blank"
             ? translate("completeSentence")
@@ -621,6 +614,7 @@ function localizedQuizTypeLabel(type: QuizType, language: "en" | "vi") {
       "en-to-vi-type": "Gõ nghĩa tiếng Việt",
       "vi-to-en-type": "Gõ từ tiếng Anh",
       "fill-blank": "Điền từ vào câu",
+      "sentence-writing": "Viết câu với từ vựng",
       flashcard: "Flashcard tự ôn",
       mixed: "Random thông minh"
     };

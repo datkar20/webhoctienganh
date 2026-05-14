@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BarChart3, Target, Trophy } from "lucide-react";
 import { useMemo } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useLanguage } from "@/components/i18n/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,9 +12,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { Progress } from "@/components/ui/progress";
 import { useAllVocabulary, useQuizAttempts, useTopics } from "@/lib/firestore-hooks";
+import { vocabularyProgressPercent } from "@/lib/progress";
 
 export default function ProgressPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { topics, loading: topicsLoading } = useTopics(user?.uid);
   const { vocabulary, loading: vocabularyLoading } = useAllVocabulary(user?.uid, topics);
   const { attempts, loading: attemptsLoading } = useQuizAttempts(user?.uid, 50);
@@ -28,27 +31,26 @@ export default function ProgressPage() {
     const topicProgress = topics.map((topic) => {
       const words = vocabulary.filter((item) => item.topicId === topic.id);
       const masteredWords = words.filter((item) => item.masteryLevel === "mastered").length;
-      const progressPoints = words.reduce((sum, item) => sum + progressWeight(item), 0);
       return {
         topic,
         total: words.length,
         mastered: masteredWords,
-        progress: words.length ? Math.round(progressPoints / words.length) : 0
+        progress: vocabularyProgressPercent(words)
       };
     });
     return { mastered, weak, accuracy, topWrong, topicProgress };
   }, [topics, vocabulary]);
 
-  if (topicsLoading || vocabularyLoading || attemptsLoading) return <LoadingState label="Loading progress..." />;
+  if (topicsLoading || vocabularyLoading || attemptsLoading) return <LoadingState label={t("loadingProgress")} />;
 
   if (vocabulary.length === 0) {
     return (
       <EmptyState
-        title="No progress data yet"
-        description="Add vocabulary or create demo data from the dashboard to start tracking progress."
+        title={t("noProgressData")}
+        description={t("noProgressDataDesc")}
         action={
           <Button asChild>
-            <Link href="/dashboard">Open dashboard</Link>
+            <Link href="/dashboard">{t("openDashboard")}</Link>
           </Button>
         }
       />
@@ -58,23 +60,23 @@ export default function ProgressPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-950">Progress</h1>
-        <p className="text-sm text-slate-500">Accuracy, mastery, quiz attempts, and topic-level performance.</p>
+        <h1 className="text-2xl font-bold text-slate-950">{t("progressTitle")}</h1>
+        <p className="text-sm text-slate-500">{t("progressSubtitle")}</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <Metric title="Total words" value={vocabulary.length} icon={<BarChart3 className="h-5 w-5" />} />
-        <Metric title="Mastered" value={stats.mastered} icon={<Trophy className="h-5 w-5" />} />
-        <Metric title="Weak words" value={stats.weak} icon={<Target className="h-5 w-5" />} />
-        <Metric title="Accuracy" value={`${stats.accuracy}%`} icon={<Target className="h-5 w-5" />} />
-        <Metric title="Quiz attempts" value={attempts.length} icon={<BarChart3 className="h-5 w-5" />} />
+        <Metric title={t("totalWords")} value={vocabulary.length} icon={<BarChart3 className="h-5 w-5" />} />
+        <Metric title={t("mastered")} value={stats.mastered} icon={<Trophy className="h-5 w-5" />} />
+        <Metric title={t("weakWordsTitle")} value={stats.weak} icon={<Target className="h-5 w-5" />} />
+        <Metric title={t("accuracy")} value={`${stats.accuracy}%`} icon={<Target className="h-5 w-5" />} />
+        <Metric title={t("quizAttempts")} value={attempts.length} icon={<BarChart3 className="h-5 w-5" />} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Topic Progress</CardTitle>
-            <CardDescription>Mastered words divided by total words.</CardDescription>
+            <CardTitle>{t("topicProgress")}</CardTitle>
+            <CardDescription>{t("topicProgressDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {stats.topicProgress.map(({ topic, total, mastered, progress }) => (
@@ -82,7 +84,7 @@ export default function ProgressPage() {
                 <div className="flex justify-between gap-3 text-sm">
                   <span className="font-medium text-slate-800">{topic.name}</span>
                   <span className="text-slate-500">
-                    {progress}% learned - {mastered}/{total} mastered
+                    {progress}% {t("learned")} - {mastered}/{total} {t("mastered").toLowerCase()}
                   </span>
                 </div>
                 <Progress value={progress} />
@@ -93,12 +95,12 @@ export default function ProgressPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Top Wrong Words</CardTitle>
-            <CardDescription>Words with the highest wrongCount.</CardDescription>
+            <CardTitle>{t("topWrongWords")}</CardTitle>
+            <CardDescription>{t("topWrongWordsDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {stats.topWrong.filter((item) => item.wrongCount > 0).length === 0 ? (
-              <EmptyState title="No wrong answers yet" description="Wrong words will appear after quiz practice." />
+              <EmptyState title={t("noWrongAnswers")} description={t("noWrongAnswersDesc")} />
             ) : (
               stats.topWrong
                 .filter((item) => item.wrongCount > 0)
@@ -120,17 +122,6 @@ export default function ProgressPage() {
       </div>
     </div>
   );
-}
-
-function progressWeight(item: { masteryLevel: string; correctCount?: number; wrongCount?: number }) {
-  if (item.masteryLevel === "mastered") return 100;
-  if (item.masteryLevel === "familiar") return 70;
-  if (item.masteryLevel === "learning") return 40;
-  if (item.masteryLevel === "weak") return 15;
-  const correct = item.correctCount ?? 0;
-  const wrong = item.wrongCount ?? 0;
-  if (correct + wrong > 0) return Math.min(35, correct * 12);
-  return 0;
 }
 
 function Metric({ title, value, icon }: { title: string; value: number | string; icon: React.ReactNode }) {

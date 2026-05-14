@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CalendarClock, Dumbbell, Layers } from "lucide-react";
 import { useMemo } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useLanguage } from "@/components/i18n/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import { formatDate, isDueToday, masteryLabel } from "@/lib/utils";
 
 export default function ReviewPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { topics, loading: topicsLoading } = useTopics(user?.uid);
   const { vocabulary, loading: vocabularyLoading } = useAllVocabulary(user?.uid, topics);
 
@@ -27,13 +29,13 @@ export default function ReviewPage() {
       .filter((group) => group.words.length > 0);
   }, [topics, vocabulary]);
 
-  if (topicsLoading || vocabularyLoading) return <LoadingState label="Loading review queue..." />;
+  if (topicsLoading || vocabularyLoading) return <LoadingState label={t("loadingVocabulary")} />;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-950">Review Today</h1>
-        <p className="text-sm text-slate-500">Words with nextReviewAt due today or earlier.</p>
+        <h1 className="text-2xl font-bold text-slate-950">{t("reviewTitle")}</h1>
+        <p className="text-sm text-slate-500">{t("reviewSubtitle")}</p>
       </div>
 
       {groupedDue.length === 0 ? (

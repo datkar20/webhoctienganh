@@ -24,6 +24,7 @@ export type QuizType =
   | "en-to-vi-type"
   | "vi-to-en-type"
   | "fill-blank"
+  | "sentence-writing"
   | "flashcard"
   | "mixed";
 

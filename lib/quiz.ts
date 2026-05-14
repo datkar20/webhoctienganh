@@ -92,6 +92,17 @@ function questionFor(item: VocabularyItem, questionType: QuizType, pool: Vocabul
     };
   }
 
+  if (questionType === "sentence-writing") {
+    return {
+      id: randomId("question"),
+      vocabularyId: item.id,
+      questionType,
+      prompt: item.word,
+      correctAnswer: item.word,
+      vocabulary: item
+    };
+  }
+
   if (questionType === "flashcard") {
     return {
       id: randomId("question"),
@@ -120,7 +131,7 @@ function generateBlockedMixedQuestions(pool: VocabularyItem[], count: number) {
   for (let index = 0; index < selected.length; index += BLOCK_SIZE) {
     const block = selected.slice(index, index + BLOCK_SIZE);
     const choiceTypes: QuizType[] = ["en-to-vi-choice", "vi-to-en-choice"];
-    const typingTypes: QuizType[] = ["en-to-vi-type", "vi-to-en-type"];
+    const typingTypes: QuizType[] = ["en-to-vi-type", "vi-to-en-type", "fill-blank", "sentence-writing"];
 
     block.forEach((item, itemIndex) => {
       questions.push(questionFor(item, choiceTypes[itemIndex % choiceTypes.length], pool));
@@ -150,6 +161,12 @@ export function generateQuizQuestions(
 }
 
 export function evaluateQuizAnswer(question: LocalQuizQuestion, answer: string) {
+  if (question.questionType === "sentence-writing") {
+    const normalizedAnswer = normalizeAnswer(answer);
+    const normalizedWord = normalizeAnswer(question.vocabulary.word);
+    return normalizedAnswer.includes(normalizedWord) && normalizedAnswer.split(" ").filter(Boolean).length >= 4;
+  }
+
   if (question.questionType === "fill-blank" || question.questionType === "vi-to-en-type") {
     return normalizeAnswer(answer) === normalizeAnswer(question.correctAnswer);
   }
