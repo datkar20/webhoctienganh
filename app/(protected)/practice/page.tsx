@@ -251,15 +251,6 @@ export default function PracticePage() {
 
   useEffect(() => {
     if (!feedback) return;
-    const timeout = window.setTimeout(() => {
-      goNext();
-    }, 5000);
-
-    return () => window.clearTimeout(timeout);
-  }, [feedback, goNext]);
-
-  useEffect(() => {
-    if (!feedback) return;
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Enter") {
