@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useLanguage } from "@/components/i18n/language-provider";
+import { SpeakButton } from "@/components/speak-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -355,7 +356,10 @@ function QuestionView({
       <div className="space-y-4">
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center">
           <p className="text-sm text-slate-500">Front</p>
-          <p className="mt-2 text-3xl font-bold text-slate-950">{question.vocabulary.word}</p>
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <p className="text-3xl font-bold text-slate-950">{question.vocabulary.word}</p>
+            <SpeakButton text={question.vocabulary.word} size="icon" variant="ghost" />
+          </div>
           <p className="mt-2 text-sm text-slate-500">{question.vocabulary.phonetic}</p>
         </div>
         {showBack ? (
@@ -370,7 +374,10 @@ function QuestionView({
                 />
               </div>
             ) : null}
-            <p className="text-lg font-semibold text-teal-950">{question.vocabulary.meaningVi}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-lg font-semibold text-teal-950">{question.vocabulary.meaningVi}</p>
+              <SpeakButton text={question.vocabulary.word} size="sm" variant="secondary" />
+            </div>
             <p className="mt-1 text-sm text-teal-800">
               {question.vocabulary.partOfSpeech} {question.vocabulary.phonetic}
             </p>
@@ -502,7 +509,10 @@ function FeedbackOverlay({
             {t("correctAnswer")}: <span className="font-semibold text-slate-900">{feedback.question.correctAnswer}</span>
           </p>
           <div className="mt-4 rounded-lg bg-slate-50 p-4 text-left">
-            <p className="text-lg font-semibold text-slate-950">{feedback.question.vocabulary.word}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-lg font-semibold text-slate-950">{feedback.question.vocabulary.word}</p>
+              <SpeakButton text={feedback.question.vocabulary.word} size="sm" variant="secondary" />
+            </div>
             <p className="text-sm text-slate-600">{feedback.question.vocabulary.meaningVi}</p>
             <p className="mt-2 text-xs text-slate-500">{feedback.question.vocabulary.partOfSpeech} {feedback.question.vocabulary.phonetic}</p>
           </div>

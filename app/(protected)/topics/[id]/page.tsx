@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { VocabularyFormDialog } from "@/components/forms/vocabulary-form-dialog";
+import { SpeakButton } from "@/components/speak-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -154,7 +155,10 @@ export default function TopicDetailPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <CardTitle className="text-lg">{item.word}</CardTitle>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <CardTitle className="text-lg">{item.word}</CardTitle>
+                      <SpeakButton text={item.word} size="icon" variant="ghost" />
+                    </div>
                     <p className="text-sm text-slate-500">
                       {item.phonetic || "No phonetic"} {item.partOfSpeech ? `- ${item.partOfSpeech}` : ""}
                     </p>
