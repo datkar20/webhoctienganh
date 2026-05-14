@@ -85,11 +85,14 @@ export default function PracticePage() {
   const plannedQuestionCount = useMemo(() => {
     const total = availableVocabulary.length;
     if (total === 0) return 0;
-    if (questionPlan === "once") return total;
-    if (questionPlan === "twice") return total * 2;
-    if (questionPlan === "triple") return total * 3;
-    return total * (retryWordIds.length > 0 ? 3 : 2);
-  }, [availableVocabulary.length, questionPlan, retryWordIds.length]);
+    const rounds =
+      questionPlan === "once" ? 1 :
+      questionPlan === "twice" ? 2 :
+      questionPlan === "triple" ? 3 :
+      retryWordIds.length > 0 ? 3 : 2;
+    const base = total * rounds;
+    return quizType === "mixed" ? base * 2 : base;
+  }, [availableVocabulary.length, questionPlan, quizType, retryWordIds.length]);
 
   function startQuiz() {
     if (!topicId) {
@@ -424,19 +427,22 @@ function QuestionView({
       <div className="space-y-4">
         <Prompt question={question} t={t} />
         <div className="grid gap-3 sm:grid-cols-2">
-          {question.options.map((option) => (
+          {question.options.map((option, index) => (
             <button
               key={option}
               type="button"
               disabled={disabled}
               onClick={() => onChoiceAnswer(option)}
-              className={`rounded-lg border p-4 text-left text-sm font-medium transition ${
+              className={`rounded-xl border p-4 text-left text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-70 ${choiceClassName(index)} ${
                 selectedAnswer === option
                   ? "border-teal-500 bg-teal-50 text-teal-950"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-teal-200"
+                  : ""
               }`}
             >
-              {option}
+              <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-xs font-bold text-slate-700">
+                {String.fromCharCode(65 + index)}
+              </span>
+              <span className="block leading-6">{option}</span>
             </button>
           ))}
         </div>
@@ -454,11 +460,28 @@ function QuestionView({
           value={inputAnswer}
           disabled={disabled}
           onChange={(event) => onInputAnswer(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              const value = event.currentTarget.value.trim();
+              if (value && !disabled) onChoiceAnswer(value);
+            }
+          }}
           placeholder={question.questionType === "en-to-vi-type" ? t("typeVi") : t("typeEn")}
         />
       </div>
     </div>
   );
+}
+
+function choiceClassName(index: number) {
+  const classes = [
+    "border-sky-200 bg-sky-50 text-sky-950 hover:border-sky-300",
+    "border-emerald-200 bg-emerald-50 text-emerald-950 hover:border-emerald-300",
+    "border-amber-200 bg-amber-50 text-amber-950 hover:border-amber-300",
+    "border-rose-200 bg-rose-50 text-rose-950 hover:border-rose-300"
+  ];
+  return classes[index % classes.length];
 }
 
 function Prompt({ question, t }: { question: LocalQuizQuestion; t?: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string }) {

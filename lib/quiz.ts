@@ -2,12 +2,7 @@ import { checkAnswer, normalizeAnswer } from "@/lib/answers";
 import { randomId } from "@/lib/utils";
 import type { LocalQuizQuestion, QuizType, VocabularyItem } from "@/types";
 
-const SMART_RANDOM_TYPES: QuizType[] = [
-  "en-to-vi-choice",
-  "vi-to-en-choice",
-  "en-to-vi-type",
-  "vi-to-en-type"
-];
+const BLOCK_SIZE = 10;
 
 function shuffle<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
@@ -49,6 +44,96 @@ function repeatedSelection(pool: VocabularyItem[], count: number) {
   return selected.slice(0, count);
 }
 
+function questionFor(item: VocabularyItem, questionType: QuizType, pool: VocabularyItem[]): LocalQuizQuestion {
+  if (questionType === "en-to-vi-choice") {
+    return {
+      id: randomId("question"),
+      vocabularyId: item.id,
+      questionType,
+      prompt: item.word,
+      correctAnswer: item.meaningVi,
+      options: choicesFor(pool, item, "meaningVi"),
+      vocabulary: item
+    };
+  }
+
+  if (questionType === "vi-to-en-choice") {
+    return {
+      id: randomId("question"),
+      vocabularyId: item.id,
+      questionType,
+      prompt: item.meaningVi,
+      correctAnswer: item.word,
+      options: choicesFor(pool, item, "word"),
+      vocabulary: item
+    };
+  }
+
+  if (questionType === "vi-to-en-type") {
+    return {
+      id: randomId("question"),
+      vocabularyId: item.id,
+      questionType,
+      prompt: item.meaningVi,
+      correctAnswer: item.word,
+      vocabulary: item
+    };
+  }
+
+  if (questionType === "fill-blank") {
+    return {
+      id: randomId("question"),
+      vocabularyId: item.id,
+      questionType,
+      prompt: "Fill the missing word",
+      correctAnswer: item.word,
+      blankSentence: blankSentence(item),
+      vocabulary: item
+    };
+  }
+
+  if (questionType === "flashcard") {
+    return {
+      id: randomId("question"),
+      vocabularyId: item.id,
+      questionType,
+      prompt: item.word,
+      correctAnswer: item.meaningVi,
+      vocabulary: item
+    };
+  }
+
+  return {
+    id: randomId("question"),
+    vocabularyId: item.id,
+    questionType,
+    prompt: item.word,
+    correctAnswer: item.meaningVi,
+    vocabulary: item
+  };
+}
+
+function generateBlockedMixedQuestions(pool: VocabularyItem[], count: number) {
+  const selected = repeatedSelection(pool, count);
+  const questions: LocalQuizQuestion[] = [];
+
+  for (let index = 0; index < selected.length; index += BLOCK_SIZE) {
+    const block = selected.slice(index, index + BLOCK_SIZE);
+    const choiceTypes: QuizType[] = ["en-to-vi-choice", "vi-to-en-choice"];
+    const typingTypes: QuizType[] = ["en-to-vi-type", "vi-to-en-type"];
+
+    block.forEach((item, itemIndex) => {
+      questions.push(questionFor(item, choiceTypes[itemIndex % choiceTypes.length], pool));
+    });
+
+    block.forEach((item, itemIndex) => {
+      questions.push(questionFor(item, typingTypes[itemIndex % typingTypes.length], pool));
+    });
+  }
+
+  return questions;
+}
+
 export function generateQuizQuestions(
   vocabulary: VocabularyItem[],
   quizType: QuizType,
@@ -58,81 +143,10 @@ export function generateQuizQuestions(
   const pool = wordIds?.length
     ? vocabulary.filter((item) => wordIds.includes(item.id))
     : vocabulary;
+  if (quizType === "mixed") return generateBlockedMixedQuestions(pool, count);
+
   const selected = repeatedSelection(pool, count);
-
-  return selected.map((item, index) => {
-    const questionType =
-      quizType === "mixed"
-        ? SMART_RANDOM_TYPES[index % SMART_RANDOM_TYPES.length]
-        : quizType;
-
-    if (questionType === "en-to-vi-choice") {
-      return {
-        id: randomId("question"),
-        vocabularyId: item.id,
-        questionType,
-        prompt: item.word,
-        correctAnswer: item.meaningVi,
-        options: choicesFor(pool, item, "meaningVi"),
-        vocabulary: item
-      };
-    }
-
-    if (questionType === "vi-to-en-choice") {
-      return {
-        id: randomId("question"),
-        vocabularyId: item.id,
-        questionType,
-        prompt: item.meaningVi,
-        correctAnswer: item.word,
-        options: choicesFor(pool, item, "word"),
-        vocabulary: item
-      };
-    }
-
-    if (questionType === "vi-to-en-type") {
-      return {
-        id: randomId("question"),
-        vocabularyId: item.id,
-        questionType,
-        prompt: item.meaningVi,
-        correctAnswer: item.word,
-        vocabulary: item
-      };
-    }
-
-    if (questionType === "fill-blank") {
-      return {
-        id: randomId("question"),
-        vocabularyId: item.id,
-        questionType,
-        prompt: "Fill the missing word",
-        correctAnswer: item.word,
-        blankSentence: blankSentence(item),
-        vocabulary: item
-      };
-    }
-
-    if (questionType === "flashcard") {
-      return {
-        id: randomId("question"),
-        vocabularyId: item.id,
-        questionType,
-        prompt: item.word,
-        correctAnswer: item.meaningVi,
-        vocabulary: item
-      };
-    }
-
-    return {
-      id: randomId("question"),
-      vocabularyId: item.id,
-      questionType,
-      prompt: item.word,
-      correctAnswer: item.meaningVi,
-      vocabulary: item
-    };
-  });
+  return selected.map((item) => questionFor(item, quizType, pool));
 }
 
 export function evaluateQuizAnswer(question: LocalQuizQuestion, answer: string) {
