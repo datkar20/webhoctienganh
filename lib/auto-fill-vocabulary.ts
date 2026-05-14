@@ -1,5 +1,5 @@
 import type { Difficulty, ExtractedVocabulary } from "@/types";
-import { suggestVocabularyImageUrl } from "@/lib/extract";
+import { findVocabularyImageUrl } from "@/lib/extract";
 import { approximatePhonetic } from "@/lib/phonetics";
 
 export function guessPartOfSpeech(word: string) {
@@ -44,9 +44,10 @@ export async function autoFillVocabularyFields({
   const fallbackMeaning = looksVietnamese ? originalWord : "";
   const resolvedPartOfSpeech = partOfSpeech?.trim() || guessPartOfSpeech(cleanWord);
   const resolvedExampleEn = exampleEn?.trim() || `I want to remember the word "${cleanWord}".`;
-  const [resolvedMeaningVi, resolvedExampleVi] = await Promise.all([
+  const [resolvedMeaningVi, resolvedExampleVi, resolvedImageUrl] = await Promise.all([
     meaningVi?.trim() ? Promise.resolve(meaningVi.trim()) : fallbackMeaning ? Promise.resolve(fallbackMeaning) : translateEnglishToVietnamese(cleanWord),
-    exampleVi?.trim() ? Promise.resolve(exampleVi.trim()) : translateEnglishToVietnamese(resolvedExampleEn)
+    exampleVi?.trim() ? Promise.resolve(exampleVi.trim()) : translateEnglishToVietnamese(resolvedExampleEn),
+    imageUrl?.trim() ? Promise.resolve(imageUrl.trim()) : findVocabularyImageUrl(cleanWord, resolvedPartOfSpeech)
   ]);
 
   return {
@@ -54,7 +55,7 @@ export async function autoFillVocabularyFields({
     meaningVi: resolvedMeaningVi,
     partOfSpeech: resolvedPartOfSpeech,
     phonetic: phonetic?.trim() || approximatePhonetic(cleanWord),
-    imageUrl: imageUrl?.trim() || suggestVocabularyImageUrl(cleanWord, resolvedPartOfSpeech),
+    imageUrl: resolvedImageUrl,
     exampleEn: resolvedExampleEn,
     exampleVi: resolvedExampleVi,
     difficulty: difficulty ?? guessDifficulty(cleanWord, 1)
@@ -146,18 +147,20 @@ export async function autoFillExtractedVocabulary(
     }
 
     const exampleEn = item.exampleEn || findExampleSentence(sourceText, item.word);
-    const [meaningVi, exampleVi] = await Promise.all([
+    const resolvedPartOfSpeech = item.partOfSpeech || guessPartOfSpeech(item.word);
+    const [meaningVi, exampleVi, imageUrl] = await Promise.all([
       item.meaningVi ? Promise.resolve(item.meaningVi) : translateEnglishToVietnamese(item.word),
-      item.exampleVi ? Promise.resolve(item.exampleVi) : translateEnglishToVietnamese(exampleEn)
+      item.exampleVi ? Promise.resolve(item.exampleVi) : translateEnglishToVietnamese(exampleEn),
+      item.imageUrl ? Promise.resolve(item.imageUrl) : findVocabularyImageUrl(item.word, resolvedPartOfSpeech)
     ]);
 
     filled.push({
       ...item,
       selected: Boolean(meaningVi) && !item.exists,
       meaningVi,
-      partOfSpeech: item.partOfSpeech || guessPartOfSpeech(item.word),
+      partOfSpeech: resolvedPartOfSpeech,
       phonetic: item.phonetic || approximatePhonetic(item.word),
-      imageUrl: item.imageUrl || suggestVocabularyImageUrl(item.word, item.partOfSpeech || guessPartOfSpeech(item.word)),
+      imageUrl,
       exampleEn,
       exampleVi,
       difficulty: item.difficulty || guessDifficulty(item.word, item.frequency)

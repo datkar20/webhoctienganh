@@ -80,27 +80,47 @@ function stableImageLock(value: string) {
 }
 
 export function suggestVocabularyImageUrl(word: string, partOfSpeech = "", topic = "") {
-  const pos = partOfSpeech.toLowerCase();
-  const topicKeyword = topic.toLowerCase();
-  const visualHint = pos.includes("verb")
-    ? "a person clearly doing the action"
-    : pos.includes("adjective")
-      ? "a simple visual scene showing the quality"
-      : pos.includes("adverb")
-        ? "movement in a realistic scene"
-        : "the object or concept as the main subject";
-  const prompt = [
-    "realistic educational vocabulary illustration",
-    `English vocabulary word: ${word.toLowerCase()}`,
-    topicKeyword ? `topic: ${topicKeyword}` : "",
-    partOfSpeech ? `part of speech: ${partOfSpeech}` : "",
-    visualHint,
-    "single clear subject, natural lighting, no text, no watermark"
-  ]
-    .filter(Boolean)
-    .join(", ");
+  return `https://picsum.photos/seed/${encodeURIComponent(`${word}-${partOfSpeech}-${topic}`)}/640/420`;
+}
 
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=640&height=420&nologo=true&seed=${stableImageLock(`${word}-${partOfSpeech}-${topic}`)}`;
+export async function findVocabularyImageUrl(word: string, partOfSpeech = "", topic = "") {
+  const query = [word, topic, partOfSpeech]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .trim();
+  if (!query) return suggestVocabularyImageUrl(word, partOfSpeech, topic);
+
+  try {
+    const url = new URL("https://commons.wikimedia.org/w/api.php");
+    url.searchParams.set("action", "query");
+    url.searchParams.set("generator", "search");
+    url.searchParams.set("gsrsearch", query);
+    url.searchParams.set("gsrnamespace", "6");
+    url.searchParams.set("gsrlimit", "8");
+    url.searchParams.set("prop", "imageinfo");
+    url.searchParams.set("iiprop", "url|mime");
+    url.searchParams.set("iiurlwidth", "640");
+    url.searchParams.set("format", "json");
+    url.searchParams.set("origin", "*");
+
+    const response = await fetch(url.toString());
+    if (!response.ok) return suggestVocabularyImageUrl(word, partOfSpeech, topic);
+    const data = (await response.json()) as {
+      query?: {
+        pages?: Record<string, { title?: string; imageinfo?: Array<{ thumburl?: string; url?: string; mime?: string }> }>;
+      };
+    };
+    const images = Object.values(data.query?.pages ?? {})
+      .flatMap((page) => page.imageinfo ?? [])
+      .filter((image) => image.mime?.startsWith("image/") && image.mime !== "image/svg+xml")
+      .map((image) => image.thumburl || image.url)
+      .filter(Boolean) as string[];
+
+    return images[stableImageLock(word) % Math.max(images.length, 1)] ?? suggestVocabularyImageUrl(word, partOfSpeech, topic);
+  } catch {
+    return suggestVocabularyImageUrl(word, partOfSpeech, topic);
+  }
 }
 
 export function extractVocabularyFromText(text: string, existingWords: string[] = []): ExtractedVocabulary[] {
@@ -140,7 +160,7 @@ export function extractVocabularyFromText(text: string, existingWords: string[] 
       meaningVi: entry?.meaningVi ?? "",
       partOfSpeech: entry?.partOfSpeech ?? "phrase",
       phonetic: "",
-      imageUrl: suggestVocabularyImageUrl(phrase, entry?.partOfSpeech, entry?.topic),
+      imageUrl: "",
       exampleEn: entry?.exampleEn ?? "",
       exampleVi: entry?.exampleVi ?? "",
       difficulty: "medium" as Difficulty,
@@ -159,7 +179,7 @@ export function extractVocabularyFromText(text: string, existingWords: string[] 
         meaningVi: entry?.meaningVi ?? "",
         partOfSpeech: entry?.partOfSpeech ?? "",
         phonetic: entry?.phonetic ?? "",
-        imageUrl: suggestVocabularyImageUrl(word, entry?.partOfSpeech, entry?.topic),
+        imageUrl: entry?.imageUrl ?? "",
         exampleEn: entry?.exampleEn ?? "",
         exampleVi: entry?.exampleVi ?? "",
         difficulty: (entry?.difficulty ?? "medium") as Difficulty,
