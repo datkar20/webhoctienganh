@@ -606,7 +606,6 @@ function FeedbackOverlay({
   const imageUrl = feedback.question.vocabulary.imageUrl;
   const isFlashcard = feedback.question.questionType === "flashcard";
   const title = feedbackTitle(feedback, t);
-  const memoryTip = buildMemoryTip(feedback.question.vocabulary.word, feedback.question.vocabulary.meaningVi);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
@@ -616,7 +615,7 @@ function FeedbackOverlay({
         }`}
       >
         {imageUrl ? (
-          <div className="mx-auto mt-4 h-32 w-48 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+          <div className="mx-auto mt-4 h-24 w-36 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imageUrl} alt={`Illustration for ${feedback.question.vocabulary.word}`} className="h-full w-full object-cover" />
           </div>
@@ -669,10 +668,6 @@ function FeedbackOverlay({
               {feedback.question.vocabulary.partOfSpeech} {displayPhonetic(feedback.question.vocabulary.word, feedback.question.vocabulary.phonetic)}
             </p>
           </div>
-          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-left">
-            <p className="text-sm font-semibold text-amber-950">{t("memoryTip")}</p>
-            <p className="mt-1 text-sm leading-6 text-amber-900">{memoryTip}</p>
-          </div>
           <Button className="mt-5 w-full" onClick={onNext} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {isLast ? t("finishQuiz") : t("nextQuestion")}
@@ -704,19 +699,6 @@ function feedbackTitle(feedback: AnswerRecord, t: (key: Parameters<ReturnType<ty
   return feedback.isCorrect ? t("correct") : t("notQuite");
 }
 
-function buildMemoryTip(word: string, meaningVi: string) {
-  const clean = word.toLowerCase();
-  const firstLetter = clean.charAt(0).toUpperCase();
-  const visual = clean.endsWith("tion")
-    ? "hãy tưởng tượng một bảng thông báo hoặc quy trình đang diễn ra"
-    : clean.endsWith("ing")
-      ? "hãy tưởng tượng một người đang thực hiện hành động đó"
-      : clean.length > 8
-        ? "chia từ thành vài mảnh nhỏ rồi gắn mỗi mảnh với một hình ảnh"
-        : "gắn từ này với một đồ vật, địa điểm hoặc hành động bạn gặp hằng ngày";
-
-  return `Mẹo nhớ: nhìn chữ "${word}", bắt đầu bằng âm/chữ ${firstLetter}, rồi liên tưởng tới nghĩa "${meaningVi}". ${visual}. Khi gặp hình ảnh đó ngoài đời, tự đọc chậm "${word}" một lần.`;
-}
 
 function retryQuestionKey(question: LocalQuizQuestion) {
   return `${question.vocabularyId}:${question.questionType}`;
