@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useLanguage } from "@/components/i18n/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +41,7 @@ const quizTypes: QuizType[] = [
 export default function PracticePage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { language, t } = useLanguage();
   const { topics, loading: topicsLoading, error: topicsError } = useTopics(user?.uid);
   const [topicId, setTopicId] = useState("");
   const [quizType, setQuizType] = useState<QuizType>("en-to-vi-choice");
@@ -187,15 +189,15 @@ export default function PracticePage() {
     setShowBack(false);
   }
 
-  if (topicsLoading) return <LoadingState label="Loading topics..." />;
+  if (topicsLoading) return <LoadingState label={t("loadingTopics")} />;
   if (topicsError) {
     return (
       <EmptyState
-        title="Could not load topics"
+        title={t("couldNotLoadTopics")}
         description={topicsError.message}
         action={
           <Button type="button" variant="outline" onClick={() => window.location.reload()}>
-            Retry
+            {t("retry")}
           </Button>
         }
       />
@@ -205,29 +207,29 @@ export default function PracticePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-950">Practice</h1>
-        <p className="text-sm text-slate-500">Choose a topic, quiz type, and question count. Results are saved automatically.</p>
+        <h1 className="text-2xl font-bold text-slate-950">{t("practiceTitle")}</h1>
+        <p className="text-sm text-slate-500">{t("practiceSubtitle")}</p>
       </div>
 
       {topics.length === 0 ? (
         <EmptyState
-          title="No topics to practice"
-          description="Create a topic and add vocabulary before starting a quiz."
+          title={t("noTopicsPractice")}
+          description={t("noTopicsPracticeDesc")}
         />
       ) : !inQuiz ? (
         <Card>
           <CardHeader>
-            <CardTitle>Quiz Setup</CardTitle>
+            <CardTitle>{t("quizSetup")}</CardTitle>
             <CardDescription>
               {retryWordIds.length > 0
                 ? `Retry mode: ${retryWordIds.length} selected wrong words.`
-                : "Practice all words from a topic."}
+                : t("practiceAll")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="topic">Topic</Label>
+                <Label htmlFor="topic">{t("topic")}</Label>
                 <Select id="topic" value={topicId} onChange={(event) => setTopicId(event.target.value)}>
                   {topics.map((topic) => (
                     <option key={topic.id} value={topic.id}>
@@ -237,17 +239,18 @@ export default function PracticePage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="quizType">Quiz type</Label>
+                <Label htmlFor="quizType">{t("quizType")}</Label>
                 <Select id="quizType" value={quizType} onChange={(event) => setQuizType(event.target.value as QuizType)}>
                   {quizTypes.map((type) => (
                     <option key={type} value={type}>
-                      {quizTypeLabel(type)}
+                      {localizedQuizTypeLabel(type, language)}
                     </option>
                   ))}
                 </Select>
+                {quizType === "mixed" ? <p className="text-xs leading-5 text-slate-500">{t("randomHint")}</p> : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="count">Questions</Label>
+                <Label htmlFor="count">{t("questions")}</Label>
                 <Select id="count" value={String(questionCount)} onChange={(event) => setQuestionCount(Number(event.target.value))}>
                   <option value="5">5</option>
                   <option value="10">10</option>
@@ -256,11 +259,11 @@ export default function PracticePage() {
               </div>
             </div>
             {vocabularyLoading ? (
-              <LoadingState label="Loading vocabulary..." className="min-h-24" />
+              <LoadingState label={t("loadingVocabulary")} className="min-h-24" />
             ) : (
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm text-slate-600">
-                  Available words: <span className="font-semibold text-slate-900">{availableVocabulary.length}</span>
+                  {t("availableWords")}: <span className="font-semibold text-slate-900">{availableVocabulary.length}</span>
                 </p>
                 {availableVocabulary.length < questionCount ? (
                   <p className="mt-1 text-xs text-amber-700">
@@ -271,7 +274,7 @@ export default function PracticePage() {
             )}
             <Button onClick={startQuiz} disabled={vocabularyLoading || availableVocabulary.length === 0}>
               <Play className="h-4 w-4" />
-              Start quiz
+              {t("startQuiz")}
             </Button>
           </CardContent>
         </Card>
@@ -281,9 +284,9 @@ export default function PracticePage() {
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div>
                 <CardTitle>
-                  Question {currentIndex + 1} of {questions.length}
+                  {t("question")} {currentIndex + 1} {t("of")} {questions.length}
                 </CardTitle>
-                <CardDescription>{selectedTopic?.name} - {quizTypeLabel(currentQuestion.questionType)}</CardDescription>
+                <CardDescription>{selectedTopic?.name} - {localizedQuizTypeLabel(currentQuestion.questionType, language)}</CardDescription>
               </div>
               <Badge variant="outline">{answers.filter((answer) => answer.isCorrect).length} correct</Badge>
             </div>
@@ -296,41 +299,24 @@ export default function PracticePage() {
               showBack={showBack}
               disabled={Boolean(feedback) || saving}
               onInputAnswer={setInputAnswer}
-              onSelectedAnswer={setSelectedAnswer}
+              onChoiceAnswer={(answer) => submitAnswer(answer)}
               onShowBack={() => setShowBack(true)}
               onFlashcardRating={(rating) => submitAnswer(rating, rating)}
+              t={t}
             />
 
             {feedback ? (
-              <div
-                className={
-                  feedback.isCorrect
-                    ? "rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-900"
-                    : "rounded-lg border border-rose-200 bg-rose-50 p-4 text-rose-900"
-                }
-              >
-                <div className="flex items-center gap-2 font-semibold">
-                  {feedback.isCorrect ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
-                  {feedback.isCorrect ? "Correct" : "Not quite"}
-                </div>
-                <p className="mt-1 text-sm">Correct answer: {feedback.question.correctAnswer}</p>
-              </div>
+              <FeedbackOverlay feedback={feedback} saving={saving} isLast={currentIndex + 1 >= questions.length} onNext={goNext} t={t} />
             ) : null}
 
             <div className="flex flex-wrap justify-end gap-2">
-              {!feedback && currentQuestion.questionType !== "flashcard" ? (
+              {!feedback && currentQuestion.questionType !== "flashcard" && !currentQuestion.options ? (
                 <Button
                   onClick={() => submitAnswer(currentQuestion.options ? selectedAnswer : inputAnswer)}
                   disabled={saving || (!selectedAnswer && !inputAnswer)}
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Submit answer
-                </Button>
-              ) : null}
-              {feedback ? (
-                <Button onClick={goNext} disabled={saving}>
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  {currentIndex + 1 >= questions.length ? "Finish quiz" : "Next question"}
+                  {t("submitAnswer")}
                 </Button>
               ) : null}
             </div>
@@ -348,9 +334,10 @@ function QuestionView({
   showBack,
   disabled,
   onInputAnswer,
-  onSelectedAnswer,
+  onChoiceAnswer,
   onShowBack,
-  onFlashcardRating
+  onFlashcardRating,
+  t
 }: {
   question: LocalQuizQuestion;
   inputAnswer: string;
@@ -358,9 +345,10 @@ function QuestionView({
   showBack: boolean;
   disabled: boolean;
   onInputAnswer: (value: string) => void;
-  onSelectedAnswer: (value: string) => void;
+  onChoiceAnswer: (value: string) => void;
   onShowBack: () => void;
   onFlashcardRating: (rating: FlashcardRating) => void;
+  t: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string;
 }) {
   if (question.questionType === "flashcard") {
     return (
@@ -418,14 +406,14 @@ function QuestionView({
   if (question.options) {
     return (
       <div className="space-y-4">
-        <Prompt question={question} />
+        <Prompt question={question} t={t} />
         <div className="grid gap-3 sm:grid-cols-2">
           {question.options.map((option) => (
             <button
               key={option}
               type="button"
               disabled={disabled}
-              onClick={() => onSelectedAnswer(option)}
+              onClick={() => onChoiceAnswer(option)}
               className={`rounded-lg border p-4 text-left text-sm font-medium transition ${
                 selectedAnswer === option
                   ? "border-teal-500 bg-teal-50 text-teal-950"
@@ -442,32 +430,88 @@ function QuestionView({
 
   return (
     <div className="space-y-4">
-      <Prompt question={question} />
+      <Prompt question={question} t={t} />
       <div className="space-y-2">
-        <Label htmlFor="answer">Your answer</Label>
+        <Label htmlFor="answer">{t("yourAnswer")}</Label>
         <Input
           id="answer"
           value={inputAnswer}
           disabled={disabled}
           onChange={(event) => onInputAnswer(event.target.value)}
-          placeholder={question.questionType === "en-to-vi-type" ? "Type Vietnamese meaning..." : "Type English word..."}
+          placeholder={question.questionType === "en-to-vi-type" ? t("typeVi") : t("typeEn")}
         />
       </div>
     </div>
   );
 }
 
-function Prompt({ question }: { question: LocalQuizQuestion }) {
+function Prompt({ question, t }: { question: LocalQuizQuestion; t?: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string }) {
+  const translate = t ?? ((key: string) => key);
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-6">
       <p className="text-sm font-medium text-slate-500">
         {question.questionType === "en-to-vi-type" || question.questionType === "en-to-vi-choice"
-          ? "Choose or type the Vietnamese meaning"
+          ? translate(question.questionType === "en-to-vi-choice" ? "chooseVi" : "typeVi")
           : question.questionType === "fill-blank"
-            ? "Complete the sentence"
-            : "Choose or type the English word"}
+            ? translate("completeSentence")
+            : translate(question.questionType === "vi-to-en-choice" ? "chooseEn" : "typeEn")}
       </p>
       <p className="mt-2 text-2xl font-semibold text-slate-950">{question.blankSentence ?? question.prompt}</p>
+    </div>
+  );
+}
+
+function FeedbackOverlay({
+  feedback,
+  saving,
+  isLast,
+  onNext,
+  t
+}: {
+  feedback: AnswerRecord;
+  saving: boolean;
+  isLast: boolean;
+  onNext: () => void;
+  t: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string;
+}) {
+  const imageUrl = feedback.question.vocabulary.imageUrl;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
+      <div
+        className={`w-full max-w-lg overflow-hidden rounded-2xl border bg-white shadow-soft transition ${
+          feedback.isCorrect ? "border-emerald-200" : "border-rose-200"
+        }`}
+      >
+        {imageUrl ? (
+          <div className="h-52 bg-slate-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imageUrl} alt={`Illustration for ${feedback.question.vocabulary.word}`} className="h-full w-full object-cover" />
+          </div>
+        ) : null}
+        <div className="p-6 text-center">
+          <div
+            className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${
+              feedback.isCorrect ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+            }`}
+          >
+            {feedback.isCorrect ? <CheckCircle2 className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
+          </div>
+          <h3 className="mt-4 text-2xl font-bold text-slate-950">{feedback.isCorrect ? t("correct") : t("notQuite")}</h3>
+          <p className="mt-2 text-sm text-slate-500">
+            {t("correctAnswer")}: <span className="font-semibold text-slate-900">{feedback.question.correctAnswer}</span>
+          </p>
+          <div className="mt-4 rounded-lg bg-slate-50 p-4 text-left">
+            <p className="text-lg font-semibold text-slate-950">{feedback.question.vocabulary.word}</p>
+            <p className="text-sm text-slate-600">{feedback.question.vocabulary.meaningVi}</p>
+            <p className="mt-2 text-xs text-slate-500">{feedback.question.vocabulary.partOfSpeech} {feedback.question.vocabulary.phonetic}</p>
+          </div>
+          <Button className="mt-5 w-full" onClick={onNext} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {isLast ? t("finishQuiz") : t("nextQuestion")}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -480,4 +524,21 @@ function ratingLabel(rating: FlashcardRating) {
     mastered: "Rất thuộc"
   };
   return labels[rating];
+}
+
+function localizedQuizTypeLabel(type: QuizType, language: "en" | "vi") {
+  if (language === "vi") {
+    const labels: Record<QuizType, string> = {
+      "en-to-vi-choice": "Trắc nghiệm Anh -> Việt",
+      "vi-to-en-choice": "Trắc nghiệm Việt -> Anh",
+      "en-to-vi-type": "Gõ nghĩa tiếng Việt",
+      "vi-to-en-type": "Gõ từ tiếng Anh",
+      "fill-blank": "Điền từ vào câu",
+      flashcard: "Flashcard tự ôn",
+      mixed: "Random thông minh"
+    };
+    return labels[type];
+  }
+
+  return quizTypeLabel(type);
 }

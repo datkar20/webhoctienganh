@@ -2,13 +2,11 @@ import { checkAnswer, normalizeAnswer } from "@/lib/answers";
 import { randomId } from "@/lib/utils";
 import type { LocalQuizQuestion, QuizType, VocabularyItem } from "@/types";
 
-const QUESTION_TYPES: Exclude<QuizType, "mixed">[] = [
+const SMART_RANDOM_TYPES: QuizType[] = [
   "en-to-vi-choice",
   "vi-to-en-choice",
   "en-to-vi-type",
-  "vi-to-en-type",
-  "fill-blank",
-  "flashcard"
+  "vi-to-en-type"
 ];
 
 function shuffle<T>(items: T[]) {
@@ -51,9 +49,11 @@ export function generateQuizQuestions(
     : vocabulary;
   const selected = shuffle(pool).slice(0, count);
 
-  return selected.map((item) => {
+  return selected.map((item, index) => {
     const questionType =
-      quizType === "mixed" ? QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)] : quizType;
+      quizType === "mixed"
+        ? SMART_RANDOM_TYPES[index % SMART_RANDOM_TYPES.length]
+        : quizType;
 
     if (questionType === "en-to-vi-choice") {
       return {

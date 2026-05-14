@@ -56,7 +56,7 @@ export function quizTypeLabel(type: QuizType) {
     "vi-to-en-type": "Type English word",
     "fill-blank": "Fill in blank",
     flashcard: "Flashcard",
-    mixed: "Mixed quiz"
+    mixed: "Random smart mix"
   };
   return labels[type];
 }

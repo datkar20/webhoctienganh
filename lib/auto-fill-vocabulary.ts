@@ -101,7 +101,7 @@ export async function autoFillExtractedVocabulary(
       meaningVi,
       partOfSpeech: item.partOfSpeech || guessPartOfSpeech(item.word),
       phonetic: item.phonetic || `/${item.word}/`,
-      imageUrl: item.imageUrl || suggestVocabularyImageUrl(item.word),
+      imageUrl: item.imageUrl || suggestVocabularyImageUrl(item.word, item.partOfSpeech || guessPartOfSpeech(item.word)),
       exampleEn,
       exampleVi,
       difficulty: item.difficulty || guessDifficulty(item.word, item.frequency)
