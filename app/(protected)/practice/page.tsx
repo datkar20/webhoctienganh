@@ -40,7 +40,7 @@ const quizTypes: QuizType[] = [
 export default function PracticePage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { topics, loading: topicsLoading } = useTopics(user?.uid);
+  const { topics, loading: topicsLoading, error: topicsError } = useTopics(user?.uid);
   const [topicId, setTopicId] = useState("");
   const [quizType, setQuizType] = useState<QuizType>("en-to-vi-choice");
   const [questionCount, setQuestionCount] = useState(10);
@@ -188,6 +188,19 @@ export default function PracticePage() {
   }
 
   if (topicsLoading) return <LoadingState label="Loading topics..." />;
+  if (topicsError) {
+    return (
+      <EmptyState
+        title="Could not load topics"
+        description={topicsError.message}
+        action={
+          <Button type="button" variant="outline" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -18,7 +18,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [loading, router, user]);
 
   if (loading) {
-    return <LoadingState label="Checking your session..." className="min-h-screen" />;
+    return <LoadingState label="Preparing your workspace..." className="min-h-screen" />;
   }
 
   if (!user) {

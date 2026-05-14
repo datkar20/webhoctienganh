@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const timeout = window.setTimeout(() => {
       setError("Firebase Authentication did not respond. Check .env.local and Email/Password Auth in Firebase.");
       setLoading(false);
-    }, 6000);
+    }, 1500);
 
     const unsubscribe = onAuthStateChanged(
       auth,

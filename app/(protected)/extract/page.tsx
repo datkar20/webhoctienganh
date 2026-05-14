@@ -25,7 +25,7 @@ const sampleText =
 
 export default function ExtractPage() {
   const { user } = useAuth();
-  const { topics, loading: topicsLoading } = useTopics(user?.uid);
+  const { topics, loading: topicsLoading, error: topicsError } = useTopics(user?.uid);
   const [topicId, setTopicId] = useState("");
   const { vocabulary } = useVocabulary(user?.uid, topicId);
   const [text, setText] = useState("");
@@ -118,6 +118,19 @@ export default function ExtractPage() {
   }
 
   if (topicsLoading) return <LoadingState label="Loading topics..." />;
+  if (topicsError) {
+    return (
+      <EmptyState
+        title="Could not load topics"
+        description={topicsError.message}
+        action={
+          <Button type="button" variant="outline" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

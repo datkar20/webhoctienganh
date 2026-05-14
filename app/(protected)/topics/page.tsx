@@ -21,7 +21,7 @@ import type { Topic } from "@/types";
 
 export default function TopicsPage() {
   const { user } = useAuth();
-  const { topics, loading: topicsLoading } = useTopics(user?.uid);
+  const { topics, loading: topicsLoading, error: topicsError } = useTopics(user?.uid);
   const { vocabulary, loading: vocabularyLoading } = useAllVocabulary(user?.uid, topics);
   const [formOpen, setFormOpen] = useState(false);
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
@@ -86,7 +86,17 @@ export default function TopicsPage() {
         </Button>
       </div>
 
-      {loading ? (
+      {topicsError ? (
+        <EmptyState
+          title="Could not load topics"
+          description={topicsError.message}
+          action={
+            <Button type="button" variant="outline" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          }
+        />
+      ) : loading ? (
         <LoadingState label="Loading topics..." />
       ) : topics.length === 0 ? (
         <EmptyState
