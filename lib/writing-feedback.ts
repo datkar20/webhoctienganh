@@ -4,6 +4,7 @@ export type SentenceFeedback = {
   isCorrect: boolean;
   score: number;
   revisedText: string;
+  everydayExamples: string[];
   issues: string[];
   strengths: string[];
 };
@@ -134,6 +135,7 @@ export function gradeVocabularySentence(answer: string, vocabularyWord: string, 
     isCorrect: score >= 80,
     score,
     revisedText,
+    everydayExamples: buildEverydayExamples(vocabularyWord, clean),
     issues,
     strengths
   };
@@ -141,8 +143,36 @@ export function gradeVocabularySentence(answer: string, vocabularyWord: string, 
 
 function buildRevisedSentence(answer: string, vocabularyWord: string) {
   const normalized = answer.trim();
-  if (normalized && containsVocabularyWord(normalized, vocabularyWord) && hasVerb(normalized)) return capitalizeSentence(normalized);
+  if (normalized && containsVocabularyWord(normalized, vocabularyWord) && hasVerb(normalized)) return polishSentence(normalized);
   return capitalizeSentence(`I can use ${vocabularyWord} correctly in a clear English sentence`);
+}
+
+function polishSentence(answer: string) {
+  return capitalizeSentence(
+    answer
+      .replace(/\bi am agree\b/gi, "I agree")
+      .replace(/\bpeople is\b/gi, "people are")
+      .replace(/\bhe go\b/gi, "he goes")
+      .replace(/\bshe go\b/gi, "she goes")
+      .replace(/\bit go\b/gi, "it goes")
+      .replace(/\ba ([aeiou])/gi, "an $1")
+      .replace(/\s+/g, " ")
+  );
+}
+
+function buildEverydayExamples(vocabularyWord: string, answer: string) {
+  const word = vocabularyWord.toLowerCase();
+  const userContext = wordsOf(answer)
+    .filter((item) => item.length > 3 && normalizeAnswer(item) !== normalizeAnswer(vocabularyWord))
+    .slice(0, 2)
+    .join(" ");
+  const contextPhrase = userContext ? ` when I talk about ${userContext}` : "";
+
+  return [
+    capitalizeSentence(`I often use ${word}${contextPhrase} in daily conversations`),
+    capitalizeSentence(`This ${word} is useful when I explain my ideas clearly`),
+    capitalizeSentence(`I learned how to use ${word} in a natural sentence today`)
+  ];
 }
 
 export function evaluateWritingTask(taskType: WritingTaskType, prompt: string, answer: string, language: FeedbackLanguage = "en"): WritingEvaluation {

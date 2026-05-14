@@ -609,6 +609,14 @@ function FeedbackOverlay({
               ) : (
                 <p className="mt-3 text-sm text-emerald-700">{t("sentenceLooksGood")}</p>
               )}
+              <div className="mt-4 rounded-md border border-slate-200 bg-white p-3">
+                <p className="text-sm font-semibold text-slate-900">{t("everydayExamples")}</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700">
+                  {feedback.sentenceFeedback.everydayExamples.map((example) => (
+                    <li key={example}>{example}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           ) : null}
           <div className="mt-4 rounded-lg bg-slate-50 p-4 text-left">
