@@ -2,7 +2,7 @@
 
 import { addDoc, collection, doc, serverTimestamp, updateDoc, writeBatch } from "firebase/firestore";
 import { CheckCircle2, Eye, Loader2, Play, XCircle } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -57,6 +57,7 @@ export default function PracticePage() {
   const [selectedAnswer, setSelectedAnswer] = useState("");
   const [feedback, setFeedback] = useState<AnswerRecord | null>(null);
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
+  const [retryQueue, setRetryQueue] = useState<LocalQuizQuestion[]>([]);
   const [showBack, setShowBack] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -116,6 +117,7 @@ export default function PracticePage() {
     setFeedback(null);
     setInputAnswer("");
     setSelectedAnswer("");
+    setRetryQueue([]);
     setShowBack(false);
   }
 
@@ -144,6 +146,9 @@ export default function PracticePage() {
       const record = { question: currentQuestion, userAnswer, isCorrect };
       const nextAnswers = [...answers, record];
       setAnswers(nextAnswers);
+      if (!isCorrect && !isFlashcard) {
+        setRetryQueue((current) => [...current, createRetryQuestion(currentQuestion)]);
+      }
       setFeedback(record);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not update word progress");
@@ -152,7 +157,7 @@ export default function PracticePage() {
     }
   }
 
-  async function finishQuiz(finalAnswers: AnswerRecord[]) {
+  const finishQuiz = useCallback(async (finalAnswers: AnswerRecord[]) => {
     if (!user || !selectedTopic) return;
     setSaving(true);
     try {
@@ -188,9 +193,25 @@ export default function PracticePage() {
     } finally {
       setSaving(false);
     }
-  }
+  }, [quizType, router, selectedTopic, t, user]);
 
-  function goNext() {
+  const goNext = useCallback(() => {
+    if (retryQueue.length > 0) {
+      const [nextRetryQuestion, ...rest] = retryQueue;
+      setQuestions((current) => [
+        ...current.slice(0, currentIndex + 1),
+        nextRetryQuestion,
+        ...current.slice(currentIndex + 1)
+      ]);
+      setRetryQueue(rest);
+      setCurrentIndex(currentIndex + 1);
+      setInputAnswer("");
+      setSelectedAnswer("");
+      setFeedback(null);
+      setShowBack(false);
+      return;
+    }
+
     const nextIndex = currentIndex + 1;
     if (nextIndex >= questions.length) {
       void finishQuiz(answers);
@@ -201,7 +222,21 @@ export default function PracticePage() {
     setSelectedAnswer("");
     setFeedback(null);
     setShowBack(false);
-  }
+  }, [answers, currentIndex, finishQuiz, questions.length, retryQueue]);
+
+  useEffect(() => {
+    if (!feedback) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        goNext();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [feedback, goNext]);
 
   if (topicsLoading) return <LoadingState label={t("loadingTopics")} />;
   if (topicsError) {
@@ -569,6 +604,13 @@ function ratingLabel(rating: FlashcardRating) {
     mastered: "Rất thuộc"
   };
   return labels[rating];
+}
+
+function createRetryQuestion(question: LocalQuizQuestion): LocalQuizQuestion {
+  return {
+    ...question,
+    id: `${question.id}-retry-${Date.now()}`
+  };
 }
 
 function localizedQuizTypeLabel(type: QuizType, language: "en" | "vi") {

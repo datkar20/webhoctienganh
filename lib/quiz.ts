@@ -154,7 +154,7 @@ export function evaluateQuizAnswer(question: LocalQuizQuestion, answer: string) 
     return normalizeAnswer(answer) === normalizeAnswer(question.correctAnswer);
   }
 
-  if (question.questionType === "en-to-vi-type") {
+  if (question.questionType === "en-to-vi-type" || question.questionType === "en-to-vi-choice") {
     return checkAnswer(answer, question.correctAnswer);
   }
 

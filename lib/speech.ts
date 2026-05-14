@@ -17,7 +17,7 @@ export function speakEnglish(text: string) {
 
   if (englishVoice) utterance.voice = englishVoice;
   utterance.lang = englishVoice?.lang ?? "en-US";
-  utterance.rate = 0.86;
+  utterance.rate = 0.7;
   utterance.pitch = 1;
   window.speechSynthesis.speak(utterance);
   return true;
