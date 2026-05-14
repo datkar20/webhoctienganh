@@ -32,6 +32,11 @@ type AnswerRecord = {
   sentenceFeedback?: SentenceFeedback;
 };
 
+type RetryItem = {
+  dueIndex: number;
+  question: LocalQuizQuestion;
+};
+
 const quizTypes: QuizType[] = [
   "en-to-vi-choice",
   "vi-to-en-choice",
@@ -58,7 +63,8 @@ export default function PracticePage() {
   const [selectedAnswer, setSelectedAnswer] = useState("");
   const [feedback, setFeedback] = useState<AnswerRecord | null>(null);
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
-  const [retryQueue, setRetryQueue] = useState<LocalQuizQuestion[]>([]);
+  const [retryQueue, setRetryQueue] = useState<RetryItem[]>([]);
+  const [retryCounts, setRetryCounts] = useState<Record<string, number>>({});
   const [showBack, setShowBack] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -114,6 +120,7 @@ export default function PracticePage() {
     setInputAnswer("");
     setSelectedAnswer("");
     setRetryQueue([]);
+    setRetryCounts({});
     setShowBack(false);
   }
 
@@ -150,7 +157,18 @@ export default function PracticePage() {
       const nextAnswers = [...answers, record];
       setAnswers(nextAnswers);
       if (!isCorrect && !isFlashcard) {
-        setRetryQueue((current) => [...current, createRetryQuestion(currentQuestion)]);
+        const retryKey = retryQuestionKey(currentQuestion);
+        const retryCount = (retryCounts[retryKey] ?? 0) + 1;
+        if (retryCount <= 3) {
+          setRetryCounts((current) => ({ ...current, [retryKey]: retryCount }));
+          setRetryQueue((current) => [
+            ...current,
+            {
+              dueIndex: currentIndex + 2 + Math.floor(Math.random() * 3),
+              question: createRetryQuestion(currentQuestion, retryCount)
+            }
+          ]);
+        }
       }
       setFeedback(record);
     } catch (error) {
@@ -199,15 +217,19 @@ export default function PracticePage() {
   }, [quizType, router, selectedTopic, t, user]);
 
   const goNext = useCallback(() => {
-    if (retryQueue.length > 0) {
-      const [nextRetryQuestion, ...rest] = retryQueue;
+    const nextIndex = currentIndex + 1;
+    const dueRetryIndex = retryQueue.findIndex((item) => item.dueIndex <= nextIndex || nextIndex >= questions.length);
+
+    if (dueRetryIndex >= 0) {
+      const nextRetryItem = retryQueue[dueRetryIndex];
+      const rest = retryQueue.filter((_, index) => index !== dueRetryIndex);
       setQuestions((current) => [
-        ...current.slice(0, currentIndex + 1),
-        nextRetryQuestion,
-        ...current.slice(currentIndex + 1)
+        ...current.slice(0, nextIndex),
+        nextRetryItem.question,
+        ...current.slice(nextIndex)
       ]);
       setRetryQueue(rest);
-      setCurrentIndex(currentIndex + 1);
+      setCurrentIndex(nextIndex);
       setInputAnswer("");
       setSelectedAnswer("");
       setFeedback(null);
@@ -215,7 +237,6 @@ export default function PracticePage() {
       return;
     }
 
-    const nextIndex = currentIndex + 1;
     if (nextIndex >= questions.length) {
       void finishQuiz(answers);
       return;
@@ -226,6 +247,15 @@ export default function PracticePage() {
     setFeedback(null);
     setShowBack(false);
   }, [answers, currentIndex, finishQuiz, questions.length, retryQueue]);
+
+  useEffect(() => {
+    if (!feedback) return;
+    const timeout = window.setTimeout(() => {
+      goNext();
+    }, 5000);
+
+    return () => window.clearTimeout(timeout);
+  }, [feedback, goNext]);
 
   useEffect(() => {
     if (!feedback) return;
@@ -647,10 +677,14 @@ function ratingLabel(rating: FlashcardRating) {
   return labels[rating];
 }
 
-function createRetryQuestion(question: LocalQuizQuestion): LocalQuizQuestion {
+function retryQuestionKey(question: LocalQuizQuestion) {
+  return `${question.vocabularyId}:${question.questionType}`;
+}
+
+function createRetryQuestion(question: LocalQuizQuestion, retryCount: number): LocalQuizQuestion {
   return {
     ...question,
-    id: `${question.id}-retry-${Date.now()}`
+    id: `${question.id}-retry-${retryCount}-${Date.now()}`
   };
 }
 
