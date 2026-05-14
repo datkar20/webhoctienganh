@@ -571,7 +571,7 @@ function FeedbackOverlay({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
       <div
-        className={`w-full max-w-lg overflow-hidden rounded-2xl border bg-white shadow-soft transition ${
+        className={`max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border bg-white shadow-soft transition ${
           feedback.isCorrect ? "border-emerald-200" : "border-rose-200"
         }`}
       >

@@ -144,15 +144,37 @@ export function gradeVocabularySentence(answer: string, vocabularyWord: string, 
 function buildRevisedSentence(answer: string, vocabularyWord: string) {
   const normalized = answer.trim();
   if (normalized) {
-    const withTargetWord = containsVocabularyWord(normalized, vocabularyWord)
-      ? normalized
-      : addVocabularyToUserSentence(normalized, vocabularyWord);
-    const withVerb = hasVerb(withTargetWord)
-      ? withTargetWord
-      : `I use ${withTargetWord}`;
-    return polishSentence(withVerb);
+    const structurallyFixed = fixSentenceStructure(normalized, vocabularyWord);
+    const withTargetWord = containsVocabularyWord(structurallyFixed, vocabularyWord)
+      ? structurallyFixed
+      : addVocabularyToUserSentence(structurallyFixed, vocabularyWord);
+    return polishSentence(withTargetWord);
   }
   return capitalizeSentence(`I can use ${vocabularyWord} correctly in a clear English sentence`);
+}
+
+function fixSentenceStructure(answer: string, vocabularyWord: string) {
+  const sentence = answer.replace(/[.!?]\s*$/, "").trim();
+  const words = wordsOf(sentence);
+  if (words.length === 0) return `I can use ${vocabularyWord} correctly`;
+  if (hasVerb(sentence)) return sentence;
+
+  const [firstWord, ...restWords] = words;
+  const rest = restWords.join(" ");
+  const lowerRest = rest.toLowerCase();
+  const likelyAdjectivePhrase =
+    !rest ||
+    /^(very |really |quite |too |so )?(important|useful|good|bad|easy|hard|difficult|necessary|popular|interesting|helpful|clear|beautiful|healthy|dangerous|expensive|cheap|modern|new|old)\b/i.test(lowerRest);
+
+  if (words.length <= 2 || likelyAdjectivePhrase) {
+    return rest ? `${firstWord} is ${rest}` : `${firstWord} is important in daily life`;
+  }
+
+  if (containsVocabularyWord(sentence, vocabularyWord)) {
+    return `I think ${sentence} is important in daily life`;
+  }
+
+  return `I think ${sentence} is related to ${vocabularyWord}`;
 }
 
 function polishSentence(answer: string) {
