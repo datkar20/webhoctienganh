@@ -17,6 +17,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { db } from "@/lib/firebase";
+import { autoFillExtractedVocabulary } from "@/lib/auto-fill-vocabulary";
 import { extractVocabularyFromText } from "@/lib/extract";
 import { useTopics, useVocabulary } from "@/lib/firestore-hooks";
 import type { Difficulty, ExtractedVocabulary } from "@/types";
@@ -34,6 +35,8 @@ export default function ExtractPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [autoFillLoading, setAutoFillLoading] = useState(false);
+  const [autoFillProgress, setAutoFillProgress] = useState(0);
   const [suggestions, setSuggestions] = useState<ExtractedVocabulary[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -56,17 +59,29 @@ export default function ExtractPage() {
   const selectedTopic = topics.find((topic) => topic.id === topicId);
   const selectedCount = useMemo(() => suggestions.filter((item) => item.selected && !item.exists).length, [suggestions]);
 
-  function handleExtract() {
+  async function handleExtract() {
     if (!text.trim()) {
       toast.error("Paste an English paragraph first");
       return;
     }
-    const result = extractVocabularyFromText(
-      text,
-      vocabulary.map((item) => item.word)
-    );
-    setSuggestions(result);
-    toast.success(`Found ${result.length} candidate words`);
+    setAutoFillLoading(true);
+    setAutoFillProgress(0);
+    try {
+      const result = extractVocabularyFromText(
+        text,
+        vocabulary.map((item) => item.word)
+      );
+      const filled = await autoFillExtractedVocabulary(result, text, (done, total) => {
+        setAutoFillProgress(Math.round((done / Math.max(total, 1)) * 100));
+      });
+      setSuggestions(filled);
+      const translated = filled.filter((item) => item.meaningVi && !item.exists).length;
+      toast.success(`Found ${filled.length} candidate words, auto-filled ${translated} meanings`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not extract and translate vocabulary");
+    } finally {
+      setAutoFillLoading(false);
+    }
   }
 
   function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -294,9 +309,9 @@ export default function ExtractPage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button onClick={handleExtract}>
-                  <Wand2 className="h-4 w-4" />
-                  Extract vocabulary
+                <Button onClick={handleExtract} disabled={autoFillLoading}>
+                  {autoFillLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                  {autoFillLoading ? `Extracting and translating ${autoFillProgress}%` : "Extract vocabulary"}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => setText(sampleText)}>
                   Use sample text
