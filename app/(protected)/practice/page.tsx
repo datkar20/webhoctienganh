@@ -16,17 +16,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingState } from "@/components/ui/loading-state";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { db } from "@/lib/firebase";
 import { useTopics, useVocabulary } from "@/lib/firestore-hooks";
 import { evaluateQuizAnswer, generateQuizQuestions } from "@/lib/quiz";
 import { updateVocabularyAfterAnswer } from "@/lib/spaced-repetition";
 import { quizTypeLabel } from "@/lib/utils";
+import { gradeVocabularySentence, type SentenceFeedback } from "@/lib/writing-feedback";
 import type { FlashcardRating, LocalQuizQuestion, QuizType } from "@/types";
 
 type AnswerRecord = {
   question: LocalQuizQuestion;
   userAnswer: string;
   isCorrect: boolean;
+  sentenceFeedback?: SentenceFeedback;
 };
 
 const quizTypes: QuizType[] = [
@@ -84,10 +87,8 @@ export default function PracticePage() {
   const plannedQuestionCount = useMemo(() => {
     const total = availableVocabulary.length;
     if (total === 0) return 0;
-    const rounds = retryWordIds.length > 0 ? 3 : 1;
-    const base = total * rounds;
-    return quizType === "mixed" ? base * 2 : base;
-  }, [availableVocabulary.length, quizType, retryWordIds.length]);
+    return quizType === "mixed" ? total * 2 : total;
+  }, [availableVocabulary.length, quizType]);
 
   function startQuiz() {
     if (!topicId) {
@@ -99,10 +100,11 @@ export default function PracticePage() {
       return;
     }
 
+    const generationCount = quizType === "mixed" ? availableVocabulary.length : plannedQuestionCount;
     const nextQuestions = generateQuizQuestions(
       vocabulary,
       quizType,
-      plannedQuestionCount,
+      generationCount,
       retryWordIds.length ? retryWordIds : undefined
     );
     setQuestions(nextQuestions);
@@ -131,13 +133,20 @@ export default function PracticePage() {
   async function submitAnswer(answer: string, flashcardRating?: FlashcardRating) {
     if (!currentQuestion || feedback) return;
     const isFlashcard = currentQuestion.questionType === "flashcard";
-    const isCorrect = isFlashcard ? flashcardRating !== "forgot" : evaluateQuizAnswer(currentQuestion, answer);
+    const sentenceFeedback = currentQuestion.questionType === "sentence-writing"
+      ? gradeVocabularySentence(answer, currentQuestion.vocabulary.word)
+      : undefined;
+    const isCorrect = isFlashcard
+      ? flashcardRating !== "forgot"
+      : sentenceFeedback
+        ? sentenceFeedback.isCorrect
+        : evaluateQuizAnswer(currentQuestion, answer);
     const userAnswer = isFlashcard ? ratingLabel(flashcardRating ?? "forgot") : answer;
 
     setSaving(true);
     try {
       await applyVocabularyUpdate(currentQuestion, isCorrect, flashcardRating);
-      const record = { question: currentQuestion, userAnswer, isCorrect };
+      const record = { question: currentQuestion, userAnswer, isCorrect, sentenceFeedback };
       const nextAnswers = [...answers, record];
       setAnswers(nextAnswers);
       if (!isCorrect && !isFlashcard) {
@@ -174,7 +183,7 @@ export default function PracticePage() {
           questionType: answer.question.questionType,
           prompt: answer.question.blankSentence ?? answer.question.prompt,
           userAnswer: answer.userAnswer,
-          correctAnswer: answer.question.correctAnswer,
+          correctAnswer: answer.sentenceFeedback?.revisedText ?? answer.question.correctAnswer,
           isCorrect: answer.isCorrect,
           createdAt: serverTimestamp()
         });
@@ -265,7 +274,7 @@ export default function PracticePage() {
             <CardTitle>{t("quizSetup")}</CardTitle>
             <CardDescription>
               {retryWordIds.length > 0
-                ? `Retry mode: ${retryWordIds.length} selected wrong words.`
+                ? `${t("retryMode")}: ${retryWordIds.length} ${t("weakWordsTitle").toLowerCase()}.`
                 : t("practiceAll")}
             </CardDescription>
           </CardHeader>
@@ -321,7 +330,9 @@ export default function PracticePage() {
                 </CardTitle>
                 <CardDescription>{selectedTopic?.name} - {localizedQuizTypeLabel(currentQuestion.questionType, language)}</CardDescription>
               </div>
-              <Badge variant="outline">{answers.filter((answer) => answer.isCorrect).length} correct</Badge>
+              <Badge variant="outline">
+                {answers.filter((answer) => answer.isCorrect).length} {t("correct").toLowerCase()}
+              </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -339,7 +350,13 @@ export default function PracticePage() {
             />
 
             {feedback ? (
-              <FeedbackOverlay feedback={feedback} saving={saving} isLast={currentIndex + 1 >= questions.length} onNext={goNext} t={t} />
+              <FeedbackOverlay
+                feedback={feedback}
+                saving={saving}
+                isLast={currentIndex + 1 >= questions.length && retryQueue.length === 0}
+                onNext={goNext}
+                t={t}
+              />
             ) : null}
 
             <div className="flex flex-wrap justify-end gap-2">
@@ -475,26 +492,31 @@ function QuestionView({
       <Prompt question={question} t={t} />
       <div className="space-y-2">
         <Label htmlFor="answer">{t("yourAnswer")}</Label>
-        <Input
-          id="answer"
-          value={inputAnswer}
-          disabled={disabled}
-          onChange={(event) => onInputAnswer(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              const value = event.currentTarget.value.trim();
-              if (value && !disabled) onChoiceAnswer(value);
-            }
-          }}
-          placeholder={
-            question.questionType === "sentence-writing"
-              ? t("writeSentencePlaceholder")
-              : question.questionType === "en-to-vi-type"
-                ? t("typeVi")
-                : t("typeEn")
-          }
-        />
+        {question.questionType === "sentence-writing" ? (
+          <Textarea
+            id="answer"
+            value={inputAnswer}
+            disabled={disabled}
+            onChange={(event) => onInputAnswer(event.target.value)}
+            placeholder={t("writeSentencePlaceholder")}
+            className="min-h-28"
+          />
+        ) : (
+          <Input
+            id="answer"
+            value={inputAnswer}
+            disabled={disabled}
+            onChange={(event) => onInputAnswer(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                const value = event.currentTarget.value.trim();
+                if (value && !disabled) onChoiceAnswer(value);
+              }
+            }}
+            placeholder={question.questionType === "en-to-vi-type" ? t("typeVi") : t("typeEn")}
+          />
+        )}
       </div>
     </div>
   );
@@ -569,8 +591,26 @@ function FeedbackOverlay({
           </div>
           <h3 className="mt-4 text-2xl font-bold text-slate-950">{feedback.isCorrect ? t("correct") : t("notQuite")}</h3>
           <p className="mt-2 text-sm text-slate-500">
-            {t("correctAnswer")}: <span className="font-semibold text-slate-900">{feedback.question.correctAnswer}</span>
+            {feedback.sentenceFeedback ? t("sentenceScore") : t("correctAnswer")}:{" "}
+            <span className="font-semibold text-slate-900">
+              {feedback.sentenceFeedback ? `${feedback.sentenceFeedback.score}/100` : feedback.question.correctAnswer}
+            </span>
           </p>
+          {feedback.sentenceFeedback ? (
+            <div className="mt-4 rounded-lg bg-slate-50 p-4 text-left">
+              <p className="text-sm font-semibold text-slate-900">{t("suggestedRevision")}</p>
+              <p className="mt-1 text-sm text-slate-700">{feedback.sentenceFeedback.revisedText}</p>
+              {feedback.sentenceFeedback.issues.length > 0 ? (
+                <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-rose-700">
+                  {feedback.sentenceFeedback.issues.map((issue) => (
+                    <li key={issue}>{issue}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-sm text-emerald-700">{t("sentenceLooksGood")}</p>
+              )}
+            </div>
+          ) : null}
           <div className="mt-4 rounded-lg bg-slate-50 p-4 text-left">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-lg font-semibold text-slate-950">{feedback.question.vocabulary.word}</p>

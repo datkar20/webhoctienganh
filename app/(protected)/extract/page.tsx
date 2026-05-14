@@ -231,11 +231,11 @@ export default function ExtractPage() {
 
       {topics.length === 0 ? (
         <EmptyState
-          title="Create a topic first"
-          description="Extracted words need a destination topic before they can be saved."
+          title={t("createTopicFirst")}
+          description={t("createTopicFirstDesc")}
           action={
             <Button asChild>
-              <Link href="/topics">Create topic</Link>
+              <Link href="/topics">{t("createTopic")}</Link>
             </Button>
           }
         />
@@ -243,13 +243,13 @@ export default function ExtractPage() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Source Text</CardTitle>
-              <CardDescription>Paste English text or upload an image containing English text.</CardDescription>
+              <CardTitle>{t("sourceText")}</CardTitle>
+              <CardDescription>{t("sourceTextDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-[260px_1fr]">
                 <div className="space-y-2">
-                  <Label htmlFor="topic">Target topic</Label>
+                  <Label htmlFor="topic">{t("targetTopic")}</Label>
                   <Select id="topic" value={topicId} onChange={(event) => setTopicId(event.target.value)}>
                     {topics.map((topic) => (
                       <option key={topic.id} value={topic.id}>
@@ -258,11 +258,11 @@ export default function ExtractPage() {
                     ))}
                   </Select>
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
-                    Selected topic decides where new extracted words are saved and which existing words are considered duplicates.
+                    {t("targetTopicHint")}
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="text">English paragraph</Label>
+                  <Label htmlFor="text">{t("englishParagraph")}</Label>
                   <Textarea
                     id="text"
                     value={text}
@@ -276,26 +276,26 @@ export default function ExtractPage() {
               <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor="image">Image vocabulary filter</Label>
+                    <Label htmlFor="image">{t("imageVocabularyFilter")}</Label>
                     <div className="flex flex-wrap gap-2">
                       <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-50">
                         <ImagePlus className="h-4 w-4" />
-                        Choose image
+                        {t("chooseImage")}
                         <input id="image" type="file" accept="image/*" onChange={handleImageChange} className="sr-only" />
                       </label>
                       <Button type="button" onClick={handleExtractFromImage} disabled={!imageFile || ocrLoading}>
                         {ocrLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                        {ocrLoading ? `Reading image ${ocrProgress}%` : "Extract text from image"}
+                        {ocrLoading ? `${t("readingImage")} ${ocrProgress}%` : t("extractTextFromImage")}
                       </Button>
                       {imageFile ? (
                         <Button type="button" variant="ghost" onClick={clearImage} disabled={ocrLoading}>
                           <X className="h-4 w-4" />
-                          Remove
+                          {t("remove")}
                         </Button>
                       ) : null}
                     </div>
                     <p className="text-xs leading-5 text-slate-500">
-                      Best for screenshots, textbook pages, flashcards, or photos with clear English text. The recognized text is added to the paragraph box above.
+                      {t("imageExtractHint")}
                     </p>
                     {ocrLoading ? (
                       <div className="h-2 overflow-hidden rounded-full bg-white">
@@ -314,10 +314,10 @@ export default function ExtractPage() {
               <div className="flex flex-wrap gap-2">
                 <Button onClick={handleExtract} disabled={autoFillLoading}>
                   {autoFillLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                  {autoFillLoading ? `Extracting and translating ${autoFillProgress}%` : "Extract vocabulary"}
+                  {autoFillLoading ? `${t("extractingTranslating")} ${autoFillProgress}%` : t("extractVocabulary")}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => setText(sampleText)}>
-                  Use sample text
+                  {t("useSampleText")}
                 </Button>
               </div>
             </CardContent>
@@ -328,12 +328,12 @@ export default function ExtractPage() {
               <CardHeader>
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                   <div>
-                    <CardTitle>Suggested Words</CardTitle>
-                    <CardDescription>Edit meanings before saving. Duplicate words are locked.</CardDescription>
+                    <CardTitle>{t("suggestedWords")}</CardTitle>
+                    <CardDescription>{t("suggestedWordsDesc")}</CardDescription>
                   </div>
                   <Button onClick={handleSave} disabled={saving || selectedCount === 0}>
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Save selected ({selectedCount})
+                    {t("saveSelected")} ({selectedCount})
                   </Button>
                 </div>
               </CardHeader>
@@ -351,7 +351,7 @@ export default function ExtractPage() {
                         />
                         <span className="text-lg font-semibold text-slate-950">{item.word}</span>
                         <Badge variant="outline">{item.frequency}x</Badge>
-                        {item.exists ? <Badge variant="amber">Already saved</Badge> : null}
+                        {item.exists ? <Badge variant="amber">{t("alreadySaved")}</Badge> : null}
                       </label>
                       <Select
                         value={item.difficulty}
@@ -369,35 +369,35 @@ export default function ExtractPage() {
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={item.imageUrl} alt={`Illustration for ${item.word}`} className="h-full w-full object-cover" />
                           <Badge className="absolute left-3 top-3 bg-white/90 text-slate-700" variant="outline">
-                            Suggested illustration
+                            {t("suggestedIllustration")}
                           </Badge>
                         </div>
                       ) : null}
                       <Input
                         value={item.meaningVi}
                         onChange={(event) => updateSuggestion(item.word, { meaningVi: event.target.value })}
-                        placeholder="Vietnamese meaning"
+                        placeholder={t("vietnameseMeaning")}
                       />
                       <Input
                         value={item.partOfSpeech}
                         onChange={(event) => updateSuggestion(item.word, { partOfSpeech: event.target.value })}
-                        placeholder="Part of speech"
+                        placeholder={t("partOfSpeech")}
                       />
                       <Input
                         value={item.imageUrl}
                         onChange={(event) => updateSuggestion(item.word, { imageUrl: event.target.value })}
-                        placeholder="Illustration image URL"
+                        placeholder={t("illustrationImageUrl")}
                         className="md:col-span-2"
                       />
                       <Input
                         value={item.exampleEn}
                         onChange={(event) => updateSuggestion(item.word, { exampleEn: event.target.value })}
-                        placeholder="English example"
+                        placeholder={t("englishExample")}
                       />
                       <Input
                         value={item.exampleVi}
                         onChange={(event) => updateSuggestion(item.word, { exampleVi: event.target.value })}
-                        placeholder="Vietnamese example"
+                        placeholder={t("vietnameseExample")}
                       />
                     </div>
                   </div>
@@ -406,8 +406,8 @@ export default function ExtractPage() {
             </Card>
           ) : (
             <EmptyState
-              title="No extracted words yet"
-              description="Paste a paragraph and run extraction to see suggested vocabulary here."
+              title={t("noExtractedWords")}
+              description={t("noExtractedWordsDesc")}
             />
           )}
         </>

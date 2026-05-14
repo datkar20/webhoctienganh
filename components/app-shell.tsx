@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Library,
   LogOut,
+  PenLine,
   RotateCcw,
   ShieldAlert,
   Wand2
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/topics", labelKey: "navTopics", icon: Library },
   { href: "/extract", labelKey: "navExtract", icon: Wand2 },
   { href: "/practice", labelKey: "navPractice", icon: Dumbbell },
+  { href: "/writing", labelKey: "navWriting", icon: PenLine },
   { href: "/weak-words", labelKey: "navWeakWords", icon: ShieldAlert },
   { href: "/review", labelKey: "navReview", icon: RotateCcw },
   { href: "/progress", labelKey: "navProgress", icon: BarChart3 }

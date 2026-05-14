@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarClock, Dumbbell, Layers } from "lucide-react";
+import { CalendarClock, Dumbbell, PenLine } from "lucide-react";
 import { useMemo } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useLanguage } from "@/components/i18n/language-provider";
@@ -40,11 +40,11 @@ export default function ReviewPage() {
 
       {groupedDue.length === 0 ? (
         <EmptyState
-          title="Nothing due today"
-          description="Your spaced repetition queue is clear. Practice any topic if you want extra reps."
+          title={t("nothingDueToday")}
+          description={t("nothingDueTodayDesc")}
           action={
             <Button variant="outline" asChild>
-              <Link href="/practice">Open practice</Link>
+              <Link href="/practice">{t("openPractice")}</Link>
             </Button>
           }
         />
@@ -61,19 +61,19 @@ export default function ReviewPage() {
                         <CalendarClock className="h-5 w-5 text-teal-700" />
                         {topic.name}
                       </CardTitle>
-                      <CardDescription>{words.length} words due for review.</CardDescription>
+                      <CardDescription>{words.length} {t("wordsDueForReview")}</CardDescription>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button variant="outline" asChild>
                         <Link href={`/practice?topicId=${topic.id}&wordIds=${wordIds}&quizType=mixed`}>
                           <Dumbbell className="h-4 w-4" />
-                          Mixed quiz
+                          {t("smartReview")}
                         </Link>
                       </Button>
                       <Button asChild>
-                        <Link href={`/practice?topicId=${topic.id}&wordIds=${wordIds}&quizType=flashcard`}>
-                          <Layers className="h-4 w-4" />
-                          Flashcards
+                        <Link href={`/practice?topicId=${topic.id}&wordIds=${wordIds}&quizType=sentence-writing`}>
+                          <PenLine className="h-4 w-4" />
+                          {t("sentenceDrill")}
                         </Link>
                       </Button>
                     </div>
@@ -89,7 +89,7 @@ export default function ReviewPage() {
                         </Badge>
                       </div>
                       <p className="mt-1 text-sm text-slate-600">{item.meaningVi}</p>
-                      <p className="mt-2 text-xs text-slate-500">Due: {formatDate(item.nextReviewAt)}</p>
+                      <p className="mt-2 text-xs text-slate-500">{t("due")}: {formatDate(item.nextReviewAt)}</p>
                     </div>
                   ))}
                 </CardContent>

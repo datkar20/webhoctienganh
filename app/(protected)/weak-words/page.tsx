@@ -31,12 +31,12 @@ export default function WeakWordsPage() {
   const selectedTopic = topics.find((topic) => topic.id === topicId);
   const practiceHref =
     topicId !== "all"
-      ? `/practice?topicId=${topicId}&wordIds=${weakWords.map((item) => item.id).join(",")}`
+      ? `/practice?topicId=${topicId}&wordIds=${weakWords.map((item) => item.id).join(",")}&quizType=mixed`
       : weakWords[0]
         ? `/practice?topicId=${weakWords[0].topicId}&wordIds=${weakWords
             .filter((item) => item.topicId === weakWords[0].topicId)
             .map((item) => item.id)
-            .join(",")}`
+            .join(",")}&quizType=mixed`
         : "/practice";
 
   if (topicsLoading || vocabularyLoading) return <LoadingState label={t("loadingVocabulary")} />;
@@ -50,7 +50,7 @@ export default function WeakWordsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Select value={topicId} onChange={(event) => setTopicId(event.target.value)} className="w-56">
-            <option value="all">All topics</option>
+            <option value="all">{t("allTopics")}</option>
             {topics.map((topic) => (
               <option key={topic.id} value={topic.id}>
                 {topic.name}
@@ -60,7 +60,7 @@ export default function WeakWordsPage() {
           <Button asChild disabled={weakWords.length === 0}>
             <Link href={practiceHref}>
               <Dumbbell className="h-4 w-4" />
-              Practice weak words
+              {t("practiceWeakWords")}
             </Link>
           </Button>
         </div>
@@ -68,14 +68,14 @@ export default function WeakWordsPage() {
 
       {weakWords.length === 0 ? (
         <EmptyState
-          title="No weak words"
-          description="Words will appear here after incorrect answers or when they are manually marked as weak."
+          title={t("noWeakWords")}
+          description={t("noWeakWordsDesc")}
         />
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>{selectedTopic ? selectedTopic.name : "All weak words"}</CardTitle>
-            <CardDescription>{weakWords.length} words need attention.</CardDescription>
+            <CardTitle>{selectedTopic ? selectedTopic.name : t("allWeakWords")}</CardTitle>
+            <CardDescription>{weakWords.length} {t("wordsNeedAttention")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {weakWords.map((item) => (
@@ -85,15 +85,15 @@ export default function WeakWordsPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <ShieldAlert className="h-4 w-4 text-rose-600" />
                       <p className="text-lg font-semibold text-slate-950">{item.word}</p>
-                      <Badge variant="rose">{item.wrongCount} wrong</Badge>
+                      <Badge variant="rose">{item.wrongCount} {t("wrong")}</Badge>
                       <Badge variant="outline">{item.topicName}</Badge>
                     </div>
                     <p className="mt-1 text-sm text-slate-600">{item.meaningVi}</p>
                     <p className="mt-2 text-sm text-slate-500">{item.exampleEn}</p>
                   </div>
                   <div className="text-sm text-slate-500 sm:text-right">
-                    <p>{item.correctCount} correct</p>
-                    <p>Next review: {formatDate(item.nextReviewAt)}</p>
+                    <p>{item.correctCount} {t("correct").toLowerCase()}</p>
+                    <p>{t("nextReview")}: {formatDate(item.nextReviewAt)}</p>
                   </div>
                 </div>
               </div>
