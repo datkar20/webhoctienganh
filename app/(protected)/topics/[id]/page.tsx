@@ -185,9 +185,17 @@ export default function TopicDetailPage() {
                     {item.correctCount} correct / {item.wrongCount} wrong
                   </Badge>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-700">Meaning</p>
-                  <p className="text-sm text-slate-600">{item.meaningVi}</p>
+                <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
+                  {item.imageUrl ? (
+                    <div className="h-28 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={item.imageUrl} alt={`Illustration for ${item.word}`} className="h-full w-full object-cover" />
+                    </div>
+                  ) : null}
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">Meaning</p>
+                    <p className="text-sm text-slate-600">{item.meaningVi}</p>
+                  </div>
                 </div>
                 {item.exampleEn ? (
                   <div className="rounded-md bg-slate-50 p-3 text-sm">

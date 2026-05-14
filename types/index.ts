@@ -51,6 +51,7 @@ export type VocabularyItem = {
   meaningVi: string;
   partOfSpeech: string;
   phonetic: string;
+  imageUrl?: string;
   exampleEn: string;
   exampleVi: string;
   difficulty: Difficulty;
@@ -95,6 +96,7 @@ export type DictionaryEntry = {
   meaningVi: string;
   partOfSpeech: string;
   phonetic: string;
+  imageUrl?: string;
   exampleEn: string;
   exampleVi: string;
   difficulty: Difficulty;
@@ -108,6 +110,7 @@ export type ExtractedVocabulary = {
   meaningVi: string;
   partOfSpeech: string;
   phonetic: string;
+  imageUrl: string;
   exampleEn: string;
   exampleVi: string;
   difficulty: Difficulty;

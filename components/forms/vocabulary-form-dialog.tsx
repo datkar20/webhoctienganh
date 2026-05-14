@@ -18,6 +18,7 @@ const defaultForm = {
   meaningVi: "",
   partOfSpeech: "",
   phonetic: "",
+  imageUrl: "",
   exampleEn: "",
   exampleVi: "",
   difficulty: "medium" as Difficulty,
@@ -49,6 +50,7 @@ export function VocabularyFormDialog({
         meaningVi: vocabulary.meaningVi,
         partOfSpeech: vocabulary.partOfSpeech,
         phonetic: vocabulary.phonetic,
+        imageUrl: vocabulary.imageUrl ?? "",
         exampleEn: vocabulary.exampleEn,
         exampleVi: vocabulary.exampleVi,
         difficulty: vocabulary.difficulty,
@@ -83,6 +85,7 @@ export function VocabularyFormDialog({
         meaningVi,
         partOfSpeech: form.partOfSpeech.trim(),
         phonetic: form.phonetic.trim(),
+        imageUrl: form.imageUrl.trim(),
         exampleEn: form.exampleEn.trim(),
         exampleVi: form.exampleVi.trim(),
         difficulty: form.difficulty,
@@ -196,6 +199,15 @@ export function VocabularyFormDialog({
             <option value="mastered">mastered</option>
             <option value="weak">weak</option>
           </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="imageUrl">Illustration image URL</Label>
+          <Input
+            id="imageUrl"
+            value={form.imageUrl}
+            onChange={(event) => setForm((current) => ({ ...current, imageUrl: event.target.value }))}
+            placeholder="https://..."
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="exampleEn">English example</Label>

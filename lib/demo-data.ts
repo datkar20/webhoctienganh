@@ -116,6 +116,9 @@ export async function createDemoData(userId: string, email?: string | null) {
         meaningVi: entry.meaningVi,
         partOfSpeech: entry.partOfSpeech,
         phonetic: entry.phonetic,
+        imageUrl: `https://loremflickr.com/640/420/${encodeURIComponent(entry.word)}?lock=${entry.word
+          .split("")
+          .reduce((total, character) => total + character.charCodeAt(0), 100)}`,
         exampleEn: entry.exampleEn,
         exampleVi: entry.exampleVi,
         difficulty: entry.difficulty,

@@ -372,6 +372,16 @@ function QuestionView({
         </div>
         {showBack ? (
           <div className="rounded-lg border border-teal-200 bg-teal-50 p-5">
+            {question.vocabulary.imageUrl ? (
+              <div className="mb-4 h-44 overflow-hidden rounded-lg border border-teal-100 bg-white">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={question.vocabulary.imageUrl}
+                  alt={`Illustration for ${question.vocabulary.word}`}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : null}
             <p className="text-lg font-semibold text-teal-950">{question.vocabulary.meaningVi}</p>
             <p className="mt-1 text-sm text-teal-800">
               {question.vocabulary.partOfSpeech} {question.vocabulary.phonetic}

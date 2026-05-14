@@ -2,6 +2,15 @@ import { DICTIONARY_BY_WORD } from "@/data/built-in-dictionary";
 import { ENGLISH_STOP_WORDS } from "@/data/stop-words";
 import type { Difficulty, ExtractedVocabulary } from "@/types";
 
+function stableImageLock(word: string) {
+  return Array.from(word).reduce((total, character) => total + character.charCodeAt(0), 0) + 100;
+}
+
+export function suggestVocabularyImageUrl(word: string) {
+  const keyword = encodeURIComponent(word.toLowerCase().replace(/\s+/g, ","));
+  return `https://loremflickr.com/640/420/${keyword}?lock=${stableImageLock(word)}`;
+}
+
 export function extractVocabularyFromText(text: string, existingWords: string[] = []): ExtractedVocabulary[] {
   const existing = new Set(existingWords.map((word) => word.toLowerCase()));
   const frequency = new Map<string, number>();
@@ -28,6 +37,7 @@ export function extractVocabularyFromText(text: string, existingWords: string[] 
         meaningVi: entry?.meaningVi ?? "",
         partOfSpeech: entry?.partOfSpeech ?? "",
         phonetic: entry?.phonetic ?? "",
+        imageUrl: suggestVocabularyImageUrl(word),
         exampleEn: entry?.exampleEn ?? "",
         exampleVi: entry?.exampleVi ?? "",
         difficulty: (entry?.difficulty ?? "medium") as Difficulty,

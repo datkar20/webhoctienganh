@@ -1,4 +1,5 @@
 import type { Difficulty, ExtractedVocabulary } from "@/types";
+import { suggestVocabularyImageUrl } from "@/lib/extract";
 
 function guessPartOfSpeech(word: string) {
   if (word.endsWith("tion") || word.endsWith("ment") || word.endsWith("ness") || word.endsWith("ity")) return "noun";
@@ -100,6 +101,7 @@ export async function autoFillExtractedVocabulary(
       meaningVi,
       partOfSpeech: item.partOfSpeech || guessPartOfSpeech(item.word),
       phonetic: item.phonetic || `/${item.word}/`,
+      imageUrl: item.imageUrl || suggestVocabularyImageUrl(item.word),
       exampleEn,
       exampleVi,
       difficulty: item.difficulty || guessDifficulty(item.word, item.frequency)

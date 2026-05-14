@@ -174,6 +174,7 @@ export default function ExtractPage() {
           meaningVi: item.meaningVi.trim(),
           partOfSpeech: item.partOfSpeech.trim(),
           phonetic: item.phonetic.trim(),
+          imageUrl: item.imageUrl.trim(),
           exampleEn: item.exampleEn.trim(),
           exampleVi: item.exampleVi.trim(),
           difficulty: item.difficulty,
@@ -361,6 +362,15 @@ export default function ExtractPage() {
                       </Select>
                     </div>
                     <div className="grid gap-3 md:grid-cols-2">
+                      {item.imageUrl ? (
+                        <div className="relative h-36 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 md:col-span-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={item.imageUrl} alt={`Illustration for ${item.word}`} className="h-full w-full object-cover" />
+                          <Badge className="absolute left-3 top-3 bg-white/90 text-slate-700" variant="outline">
+                            Suggested illustration
+                          </Badge>
+                        </div>
+                      ) : null}
                       <Input
                         value={item.meaningVi}
                         onChange={(event) => updateSuggestion(item.word, { meaningVi: event.target.value })}
@@ -370,6 +380,12 @@ export default function ExtractPage() {
                         value={item.partOfSpeech}
                         onChange={(event) => updateSuggestion(item.word, { partOfSpeech: event.target.value })}
                         placeholder="Part of speech"
+                      />
+                      <Input
+                        value={item.imageUrl}
+                        onChange={(event) => updateSuggestion(item.word, { imageUrl: event.target.value })}
+                        placeholder="Illustration image URL"
+                        className="md:col-span-2"
                       />
                       <Input
                         value={item.exampleEn}
