@@ -4,7 +4,7 @@ import Link from "next/link";
 import { addDoc, collection, getDocs, serverTimestamp } from "firebase/firestore";
 import { ImagePlus, Loader2, Save, Wand2, X } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useLanguage } from "@/components/i18n/language-provider";
@@ -41,6 +41,7 @@ export default function ExtractPage() {
   const [autoFillProgress, setAutoFillProgress] = useState(0);
   const [suggestions, setSuggestions] = useState<ExtractedVocabulary[]>([]);
   const [saving, setSaving] = useState(false);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -77,8 +78,10 @@ export default function ExtractPage() {
         setAutoFillProgress(Math.round((done / Math.max(total, 1)) * 100));
       });
       setSuggestions(filled);
-      const translated = filled.filter((item) => item.meaningVi && !item.exists).length;
-      toast.success(`Found ${filled.length} candidate words, auto-filled ${translated} meanings`);
+      toast.success(`Đã trích xuất ${filled.length} từ/cụm từ. Kéo xuống xem trước rồi bấm lưu nhé.`);
+      window.setTimeout(() => {
+        suggestionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not extract and translate vocabulary");
     } finally {
@@ -324,6 +327,21 @@ export default function ExtractPage() {
           </Card>
 
           {suggestions.length > 0 ? (
+            <div ref={suggestionsRef} className="space-y-4 scroll-mt-24">
+              <div className="sticky top-16 z-20 rounded-xl border border-teal-200 bg-teal-50/95 p-3 shadow-soft backdrop-blur">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-teal-950">
+                      Đã tìm thấy {suggestions.length} từ/cụm từ. {selectedCount} mục đang được chọn để lưu.
+                    </p>
+                    <p className="text-xs text-teal-800">Kiểm tra nghĩa và ảnh minh họa bên dưới, rồi lưu vào chủ đề {selectedTopic?.name ?? ""}.</p>
+                  </div>
+                  <Button onClick={handleSave} disabled={saving || selectedCount === 0} className="shrink-0">
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {t("saveSelected")} ({selectedCount})
+                  </Button>
+                </div>
+              </div>
             <Card>
               <CardHeader>
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -404,6 +422,7 @@ export default function ExtractPage() {
                 ))}
               </CardContent>
             </Card>
+            </div>
           ) : (
             <EmptyState
               title={t("noExtractedWords")}
