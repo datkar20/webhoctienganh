@@ -1,7 +1,7 @@
 import type { Difficulty, ExtractedVocabulary } from "@/types";
 import { suggestVocabularyImageUrl } from "@/lib/extract";
 
-function guessPartOfSpeech(word: string) {
+export function guessPartOfSpeech(word: string) {
   if (word.endsWith("tion") || word.endsWith("ment") || word.endsWith("ness") || word.endsWith("ity")) return "noun";
   if (word.endsWith("ive") || word.endsWith("al") || word.endsWith("ous") || word.endsWith("ful") || word.endsWith("able")) {
     return "adjective";
@@ -11,10 +11,57 @@ function guessPartOfSpeech(word: string) {
   return "word";
 }
 
-function guessDifficulty(word: string, frequency: number): Difficulty {
+export function guessDifficulty(word: string, frequency: number) {
   if (word.length >= 11 || frequency === 1) return "hard";
   if (word.length >= 7) return "medium";
   return "easy";
+}
+
+export async function autoFillVocabularyFields({
+  word,
+  meaningVi,
+  partOfSpeech,
+  phonetic,
+  imageUrl,
+  exampleEn,
+  exampleVi,
+  difficulty
+}: {
+  word: string;
+  meaningVi?: string;
+  partOfSpeech?: string;
+  phonetic?: string;
+  imageUrl?: string;
+  exampleEn?: string;
+  exampleVi?: string;
+  difficulty?: Difficulty;
+}) {
+  const originalWord = word.trim();
+  const looksVietnamese = hasVietnameseCharacters(originalWord);
+  const translatedWord = looksVietnamese ? await translateVietnameseToEnglish(originalWord) : "";
+  const cleanWord = (translatedWord || originalWord).trim().toLowerCase();
+  const fallbackMeaning = looksVietnamese ? originalWord : "";
+  const resolvedPartOfSpeech = partOfSpeech?.trim() || guessPartOfSpeech(cleanWord);
+  const resolvedExampleEn = exampleEn?.trim() || `I want to remember the word "${cleanWord}".`;
+  const [resolvedMeaningVi, resolvedExampleVi] = await Promise.all([
+    meaningVi?.trim() ? Promise.resolve(meaningVi.trim()) : fallbackMeaning ? Promise.resolve(fallbackMeaning) : translateEnglishToVietnamese(cleanWord),
+    exampleVi?.trim() ? Promise.resolve(exampleVi.trim()) : translateEnglishToVietnamese(resolvedExampleEn)
+  ]);
+
+  return {
+    word: cleanWord,
+    meaningVi: resolvedMeaningVi,
+    partOfSpeech: resolvedPartOfSpeech,
+    phonetic: phonetic?.trim() || `/${cleanWord}/`,
+    imageUrl: imageUrl?.trim() || suggestVocabularyImageUrl(cleanWord, resolvedPartOfSpeech),
+    exampleEn: resolvedExampleEn,
+    exampleVi: resolvedExampleVi,
+    difficulty: difficulty ?? guessDifficulty(cleanWord, 1)
+  };
+}
+
+function hasVietnameseCharacters(value: string) {
+  return /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(value);
 }
 
 function findExampleSentence(text: string, word: string) {
@@ -43,11 +90,19 @@ function cleanTranslation(value: string, source: string) {
 }
 
 export async function translateEnglishToVietnamese(text: string) {
+  return translateText(text, "en", "vi");
+}
+
+async function translateVietnameseToEnglish(text: string) {
+  return translateText(text, "vi", "en");
+}
+
+async function translateText(text: string, from: "en" | "vi", to: "en" | "vi") {
   const source = text.trim();
   if (!source) return "";
 
   try {
-    const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=en|vi`;
+    const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=${from}|${to}`;
     const response = await fetchWithTimeout(myMemoryUrl);
     if (response.ok) {
       const data = (await response.json()) as { responseData?: { translatedText?: string } };
@@ -59,7 +114,7 @@ export async function translateEnglishToVietnamese(text: string) {
   }
 
   try {
-    const googleUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(source)}`;
+    const googleUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(source)}`;
     const response = await fetchWithTimeout(googleUrl);
     if (response.ok) {
       const data = (await response.json()) as Array<Array<[string]>>;

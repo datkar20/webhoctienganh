@@ -33,6 +33,7 @@ export function TopicFormDialog({
   onClose: () => void;
 }) {
   const [form, setForm] = useState(defaultForm);
+  const [bulkTopics, setBulkTopics] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -45,12 +46,26 @@ export function TopicFormDialog({
       });
     } else {
       setForm(defaultForm);
+      setBulkTopics("");
     }
   }, [topic, open]);
 
+  function parseBulkTopics() {
+    return bulkTopics
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [name, description = ""] = line.split("|").map((part) => part.trim());
+        return { name, description };
+      })
+      .filter((item) => item.name);
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!form.name.trim()) {
+    const bulkItems = topic ? [] : parseBulkTopics();
+    if (!form.name.trim() && bulkItems.length === 0) {
       toast.error("Topic name is required");
       return;
     }
@@ -66,14 +81,20 @@ export function TopicFormDialog({
         });
         toast.success("Topic updated");
       } else {
-        await addDoc(collection(db, "users", userId, "topics"), {
-          ...form,
-          name: form.name.trim(),
-          description: form.description.trim(),
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
-        toast.success("Topic created");
+        const items = [
+          ...(form.name.trim() ? [{ name: form.name.trim(), description: form.description.trim() }] : []),
+          ...bulkItems
+        ];
+        for (const item of items) {
+          await addDoc(collection(db, "users", userId, "topics"), {
+            ...form,
+            name: item.name,
+            description: item.description,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+        }
+        toast.success(items.length > 1 ? `${items.length} topics created` : "Topic created");
       }
       onClose();
     } catch (error) {
@@ -109,9 +130,20 @@ export function TopicFormDialog({
             value={form.name}
             onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
             placeholder="IELTS, Travel, Business..."
-            required
           />
         </div>
+        {!topic ? (
+          <div className="space-y-2">
+            <Label htmlFor="bulk-topics">Add multiple topics</Label>
+            <Textarea
+              id="bulk-topics"
+              value={bulkTopics}
+              onChange={(event) => setBulkTopics(event.target.value)}
+              placeholder={"Health | Medical and wellness vocabulary\nTechnology | Digital and software words\nIELTS | Academic English"}
+            />
+            <p className="text-xs text-slate-500">One topic per line. Use “Name | Description”. These will be created together.</p>
+          </div>
+        ) : null}
         <div className="space-y-2">
           <Label htmlFor="topic-description">Description</Label>
           <Textarea

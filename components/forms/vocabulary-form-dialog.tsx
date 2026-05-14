@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { autoFillVocabularyFields } from "@/lib/auto-fill-vocabulary";
 import { db } from "@/lib/firebase";
 import type { Difficulty, MasteryLevel, VocabularyItem } from "@/types";
 
@@ -41,6 +42,7 @@ export function VocabularyFormDialog({
   onClose: () => void;
 }) {
   const [form, setForm] = useState(defaultForm);
+  const [bulkWords, setBulkWords] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -58,54 +60,109 @@ export function VocabularyFormDialog({
       });
     } else {
       setForm(defaultForm);
+      setBulkWords("");
     }
   }, [open, vocabulary]);
+
+  function parseBulkWords() {
+    return bulkWords
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [word, meaningVi = ""] = line.split("|").map((part) => part.trim());
+        return { word: word.toLowerCase(), meaningVi };
+      })
+      .filter((item) => item.word);
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const word = form.word.trim().toLowerCase();
-    const meaningVi = form.meaningVi.trim();
-    if (!word || !meaningVi) {
-      toast.error("Word and Vietnamese meaning are required");
-      return;
-    }
-
-    const duplicate = existingWords.some(
-      (existingWord) => existingWord.toLowerCase() === word && existingWord.toLowerCase() !== vocabulary?.word.toLowerCase()
-    );
-    if (duplicate) {
-      toast.error("This word already exists in the topic");
+    const bulkItems = vocabulary ? [] : parseBulkWords();
+    if (!word && bulkItems.length === 0) {
+      toast.error("Word is required");
       return;
     }
 
     setLoading(true);
     try {
-      const payload = {
-        word,
-        meaningVi,
-        partOfSpeech: form.partOfSpeech.trim(),
-        phonetic: form.phonetic.trim(),
-        imageUrl: form.imageUrl.trim(),
-        exampleEn: form.exampleEn.trim(),
-        exampleVi: form.exampleVi.trim(),
-        difficulty: form.difficulty,
-        masteryLevel: form.masteryLevel,
-        updatedAt: serverTimestamp()
-      };
+      const existing = new Set(existingWords.map((item) => item.toLowerCase()));
 
       if (vocabulary) {
+        const duplicate = existingWords.some(
+          (existingWord) => existingWord.toLowerCase() === word && existingWord.toLowerCase() !== vocabulary.word.toLowerCase()
+        );
+        if (duplicate) {
+          toast.error("This word already exists in the topic");
+          return;
+        }
+        const autoFilled = await autoFillVocabularyFields({
+          word,
+          meaningVi: form.meaningVi,
+          partOfSpeech: form.partOfSpeech,
+          phonetic: form.phonetic,
+          imageUrl: form.imageUrl,
+          exampleEn: form.exampleEn,
+          exampleVi: form.exampleVi,
+          difficulty: form.difficulty
+        });
+        if (!autoFilled.meaningVi) {
+          toast.error("Could not auto-translate this word. Please enter Vietnamese meaning.");
+          return;
+        }
+        const payload = {
+          ...autoFilled,
+          masteryLevel: form.masteryLevel,
+          updatedAt: serverTimestamp()
+        };
         await updateDoc(doc(db, "users", userId, "topics", topicId, "vocabulary", vocabulary.id), payload);
         toast.success("Vocabulary updated");
       } else {
-        await addDoc(collection(db, "users", userId, "topics", topicId, "vocabulary"), {
-          ...payload,
-          correctCount: 0,
-          wrongCount: 0,
-          lastReviewedAt: null,
-          nextReviewAt: new Date(),
-          createdAt: serverTimestamp()
+        const items = [
+          ...(word ? [{ word, meaningVi: form.meaningVi.trim() }] : []),
+          ...bulkItems
+        ];
+        const uniqueItems = items.filter((item, index, array) => {
+          const normalized = item.word.toLowerCase();
+          return !existing.has(normalized) && array.findIndex((candidate) => candidate.word.toLowerCase() === normalized) === index;
         });
-        toast.success("Vocabulary added");
+
+        if (uniqueItems.length === 0) {
+          toast.error("All words already exist in this topic");
+          return;
+        }
+
+        let savedCount = 0;
+        for (const item of uniqueItems) {
+          const autoFilled = await autoFillVocabularyFields({
+            word: item.word,
+            meaningVi: item.meaningVi,
+            partOfSpeech: form.partOfSpeech,
+            phonetic: "",
+            imageUrl: "",
+            exampleEn: "",
+            exampleVi: "",
+            difficulty: form.difficulty
+          });
+          if (!autoFilled.meaningVi) continue;
+          await addDoc(collection(db, "users", userId, "topics", topicId, "vocabulary"), {
+            ...autoFilled,
+            masteryLevel: form.masteryLevel,
+            correctCount: 0,
+            wrongCount: 0,
+            lastReviewedAt: null,
+            nextReviewAt: new Date(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+          savedCount += 1;
+        }
+        if (savedCount === 0) {
+          toast.error("Could not auto-fill these words. Please add meanings manually.");
+          return;
+        }
+        toast.success(savedCount > 1 ? `${savedCount} words added` : "Vocabulary added");
       }
       onClose();
     } catch (error) {
@@ -141,7 +198,6 @@ export function VocabularyFormDialog({
               id="word"
               value={form.word}
               onChange={(event) => setForm((current) => ({ ...current, word: event.target.value }))}
-              required
             />
           </div>
           <div className="space-y-2">
@@ -150,10 +206,23 @@ export function VocabularyFormDialog({
               id="meaningVi"
               value={form.meaningVi}
               onChange={(event) => setForm((current) => ({ ...current, meaningVi: event.target.value }))}
-              required
             />
           </div>
         </div>
+        {!vocabulary ? (
+          <div className="space-y-2">
+            <Label htmlFor="bulkWords">Add multiple words</Label>
+            <Textarea
+              id="bulkWords"
+              value={bulkWords}
+              onChange={(event) => setBulkWords(event.target.value)}
+              placeholder={"environment\nimprovement | sự cải thiện\nnegotiate\nsustainable"}
+            />
+            <p className="text-xs text-slate-500">
+              One word per line. Use “word | Vietnamese meaning” if you already know the meaning. Missing meanings and images are auto-filled.
+            </p>
+          </div>
+        ) : null}
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="partOfSpeech">Part of speech</Label>

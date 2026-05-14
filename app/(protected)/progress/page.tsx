@@ -11,7 +11,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { Progress } from "@/components/ui/progress";
 import { useAllVocabulary, useQuizAttempts, useTopics } from "@/lib/firestore-hooks";
-import { percent } from "@/lib/utils";
 
 export default function ProgressPage() {
   const { user } = useAuth();
@@ -29,11 +28,12 @@ export default function ProgressPage() {
     const topicProgress = topics.map((topic) => {
       const words = vocabulary.filter((item) => item.topicId === topic.id);
       const masteredWords = words.filter((item) => item.masteryLevel === "mastered").length;
+      const progressPoints = words.reduce((sum, item) => sum + progressWeight(item), 0);
       return {
         topic,
         total: words.length,
         mastered: masteredWords,
-        progress: percent(masteredWords, words.length)
+        progress: words.length ? Math.round(progressPoints / words.length) : 0
       };
     });
     return { mastered, weak, accuracy, topWrong, topicProgress };
@@ -82,7 +82,7 @@ export default function ProgressPage() {
                 <div className="flex justify-between gap-3 text-sm">
                   <span className="font-medium text-slate-800">{topic.name}</span>
                   <span className="text-slate-500">
-                    {mastered}/{total} mastered
+                    {progress}% learned - {mastered}/{total} mastered
                   </span>
                 </div>
                 <Progress value={progress} />
@@ -120,6 +120,17 @@ export default function ProgressPage() {
       </div>
     </div>
   );
+}
+
+function progressWeight(item: { masteryLevel: string; correctCount?: number; wrongCount?: number }) {
+  if (item.masteryLevel === "mastered") return 100;
+  if (item.masteryLevel === "familiar") return 70;
+  if (item.masteryLevel === "learning") return 40;
+  if (item.masteryLevel === "weak") return 15;
+  const correct = item.correctCount ?? 0;
+  const wrong = item.wrongCount ?? 0;
+  if (correct + wrong > 0) return Math.min(35, correct * 12);
+  return 0;
 }
 
 function Metric({ title, value, icon }: { title: string; value: number | string; icon: React.ReactNode }) {
