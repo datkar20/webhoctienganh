@@ -38,6 +38,17 @@ function blankSentence(vocabulary: VocabularyItem) {
   return pattern.test(example) ? example.replace(pattern, "____") : `${example} ____`;
 }
 
+function repeatedSelection(pool: VocabularyItem[], count: number) {
+  if (pool.length === 0 || count <= 0) return [];
+  const selected: VocabularyItem[] = [];
+
+  while (selected.length < count) {
+    selected.push(...shuffle(pool));
+  }
+
+  return selected.slice(0, count);
+}
+
 export function generateQuizQuestions(
   vocabulary: VocabularyItem[],
   quizType: QuizType,
@@ -47,7 +58,7 @@ export function generateQuizQuestions(
   const pool = wordIds?.length
     ? vocabulary.filter((item) => wordIds.includes(item.id))
     : vocabulary;
-  const selected = shuffle(pool).slice(0, count);
+  const selected = repeatedSelection(pool, count);
 
   return selected.map((item, index) => {
     const questionType =

@@ -39,6 +39,8 @@ const quizTypes: QuizType[] = [
   "mixed"
 ];
 
+type QuestionPlan = "auto" | "once" | "twice" | "triple";
+
 export default function PracticePage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -46,7 +48,7 @@ export default function PracticePage() {
   const { topics, loading: topicsLoading, error: topicsError } = useTopics(user?.uid);
   const [topicId, setTopicId] = useState("");
   const [quizType, setQuizType] = useState<QuizType>("en-to-vi-choice");
-  const [questionCount, setQuestionCount] = useState(10);
+  const [questionPlan, setQuestionPlan] = useState<QuestionPlan>("auto");
   const [retryWordIds, setRetryWordIds] = useState<string[]>([]);
   const { vocabulary, loading: vocabularyLoading } = useVocabulary(user?.uid, topicId);
   const [questions, setQuestions] = useState<LocalQuizQuestion[]>([]);
@@ -80,21 +82,29 @@ export default function PracticePage() {
 
   const currentQuestion = questions[currentIndex];
   const inQuiz = questions.length > 0;
+  const plannedQuestionCount = useMemo(() => {
+    const total = availableVocabulary.length;
+    if (total === 0) return 0;
+    if (questionPlan === "once") return total;
+    if (questionPlan === "twice") return total * 2;
+    if (questionPlan === "triple") return total * 3;
+    return total * (retryWordIds.length > 0 ? 3 : 2);
+  }, [availableVocabulary.length, questionPlan, retryWordIds.length]);
 
   function startQuiz() {
     if (!topicId) {
-      toast.error("Choose a topic first");
+      toast.error(t("chooseTopicFirst"));
       return;
     }
     if (availableVocabulary.length === 0) {
-      toast.error("This topic has no vocabulary to practice");
+      toast.error(t("noVocabularyInTopic"));
       return;
     }
 
     const nextQuestions = generateQuizQuestions(
       vocabulary,
       quizType,
-      Math.min(questionCount, availableVocabulary.length),
+      plannedQuestionCount,
       retryWordIds.length ? retryWordIds : undefined
     );
     setQuestions(nextQuestions);
@@ -168,7 +178,7 @@ export default function PracticePage() {
         });
       });
       await batch.commit();
-      toast.success("Quiz saved");
+      toast.success(t("quizSaved"));
       router.push(`/practice/results/${attemptRef.id}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save quiz result");
@@ -252,10 +262,11 @@ export default function PracticePage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="count">{t("questions")}</Label>
-                <Select id="count" value={String(questionCount)} onChange={(event) => setQuestionCount(Number(event.target.value))}>
-                  <option value="5">5</option>
-                  <option value="10">10</option>
-                  <option value="20">20</option>
+                <Select id="count" value={questionPlan} onChange={(event) => setQuestionPlan(event.target.value as QuestionPlan)}>
+                  <option value="auto">{t("autoQuestions")}</option>
+                  <option value="once">{t("allWordsOnce")}</option>
+                  <option value="twice">{t("twoRounds")}</option>
+                  <option value="triple">{t("threeRounds")}</option>
                 </Select>
               </div>
             </div>
@@ -266,11 +277,9 @@ export default function PracticePage() {
                 <p className="text-sm text-slate-600">
                   {t("availableWords")}: <span className="font-semibold text-slate-900">{availableVocabulary.length}</span>
                 </p>
-                {availableVocabulary.length < questionCount ? (
-                  <p className="mt-1 text-xs text-amber-700">
-                    The quiz will use {availableVocabulary.length} questions because this pool has fewer words.
-                  </p>
-                ) : null}
+                <p className="mt-1 text-sm text-slate-600">
+                  {t("plannedQuestions")}: <span className="font-semibold text-slate-900">{plannedQuestionCount}</span>
+                </p>
               </div>
             )}
             <Button onClick={startQuiz} disabled={vocabularyLoading || availableVocabulary.length === 0}>
@@ -376,7 +385,7 @@ function QuestionView({
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-lg font-semibold text-teal-950">{question.vocabulary.meaningVi}</p>
-              <SpeakButton text={question.vocabulary.word} size="sm" variant="secondary" />
+              <SpeakButton text={question.vocabulary.word} label={t("listen")} size="sm" variant="secondary" />
             </div>
             <p className="mt-1 text-sm text-teal-800">
               {question.vocabulary.partOfSpeech} {question.vocabulary.phonetic}
@@ -387,22 +396,22 @@ function QuestionView({
         ) : (
           <Button variant="outline" onClick={onShowBack}>
             <Eye className="h-4 w-4" />
-            Show answer
+            {t("showAnswer")}
           </Button>
         )}
         {showBack ? (
           <div className="grid gap-2 sm:grid-cols-4">
             <Button variant="outline" disabled={disabled} onClick={() => onFlashcardRating("forgot")}>
-              Chưa nhớ
+              {t("forgot")}
             </Button>
             <Button variant="outline" disabled={disabled} onClick={() => onFlashcardRating("almost")}>
-              Hơi nhớ
+              {t("almost")}
             </Button>
             <Button variant="secondary" disabled={disabled} onClick={() => onFlashcardRating("remembered")}>
-              Đã nhớ
+              {t("remembered")}
             </Button>
             <Button disabled={disabled} onClick={() => onFlashcardRating("mastered")}>
-              Rất thuộc
+              {t("mastered")}
             </Button>
           </div>
         ) : null}
@@ -463,7 +472,10 @@ function Prompt({ question, t }: { question: LocalQuizQuestion; t?: (key: Parame
             ? translate("completeSentence")
             : translate(question.questionType === "vi-to-en-choice" ? "chooseEn" : "typeEn")}
       </p>
-      <p className="mt-2 text-2xl font-semibold text-slate-950">{question.blankSentence ?? question.prompt}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <p className="text-2xl font-semibold text-slate-950">{question.blankSentence ?? question.prompt}</p>
+        <SpeakButton text={question.vocabulary.word} label={translate("listen")} size="sm" variant="secondary" />
+      </div>
     </div>
   );
 }
@@ -511,7 +523,7 @@ function FeedbackOverlay({
           <div className="mt-4 rounded-lg bg-slate-50 p-4 text-left">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-lg font-semibold text-slate-950">{feedback.question.vocabulary.word}</p>
-              <SpeakButton text={feedback.question.vocabulary.word} size="sm" variant="secondary" />
+              <SpeakButton text={feedback.question.vocabulary.word} label={t("listen")} size="sm" variant="secondary" />
             </div>
             <p className="text-sm text-slate-600">{feedback.question.vocabulary.meaningVi}</p>
             <p className="mt-2 text-xs text-slate-500">{feedback.question.vocabulary.partOfSpeech} {feedback.question.vocabulary.phonetic}</p>

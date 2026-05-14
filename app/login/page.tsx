@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { BookOpen, Loader2 } from "lucide-react";
 import { AuthMarketingPanel } from "@/components/auth/auth-marketing-panel";
 import { useAuth } from "@/components/auth/auth-provider";
+import { LanguageToggle } from "@/components/i18n/language-toggle";
+import { useLanguage } from "@/components/i18n/language-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +20,7 @@ import { auth } from "@/lib/firebase";
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,8 +64,13 @@ export default function LoginPage() {
               <p className="text-xs text-slate-500">Organized English vocabulary.</p>
             </div>
           </div>
-          <CardTitle className="text-2xl">Login to VocabVault</CardTitle>
-          <CardDescription>Continue your review queue, topic practice, and progress tracking.</CardDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-2xl">{t("loginTitle")}</CardTitle>
+              <CardDescription>{t("loginDescription")}</CardDescription>
+            </div>
+            <LanguageToggle />
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -78,7 +86,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -90,13 +98,13 @@ export default function LoginPage() {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Login
+              {t("login")}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-slate-500">
-            New here?{" "}
+            {t("newHere")}{" "}
             <Link className="font-medium text-teal-700 hover:text-teal-800" href="/register">
-              Create an account
+              {t("createAccount")}
             </Link>
           </p>
         </CardContent>

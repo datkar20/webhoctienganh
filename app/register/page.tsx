@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { BookOpen, Loader2 } from "lucide-react";
 import { AuthMarketingPanel } from "@/components/auth/auth-marketing-panel";
 import { useAuth } from "@/components/auth/auth-provider";
+import { LanguageToggle } from "@/components/i18n/language-toggle";
+import { useLanguage } from "@/components/i18n/language-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +21,7 @@ import { auth, db } from "@/lib/firebase";
 export default function RegisterPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -77,13 +80,18 @@ export default function RegisterPage() {
               <p className="text-xs text-slate-500">Organized English vocabulary.</p>
             </div>
           </div>
-          <CardTitle className="text-2xl">Create your VocabVault</CardTitle>
-          <CardDescription>Set up your private vocabulary workspace in less than a minute.</CardDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-2xl">{t("registerTitle")}</CardTitle>
+              <CardDescription>{t("registerDescription")}</CardDescription>
+            </div>
+            <LanguageToggle />
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="displayName">Display name</Label>
+              <Label htmlFor="displayName">{t("displayName")}</Label>
               <Input
                 id="displayName"
                 value={displayName}
@@ -103,7 +111,7 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -115,13 +123,13 @@ export default function RegisterPage() {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Sign up
+              {t("signUp")}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-slate-500">
-            Already have an account?{" "}
+            {t("alreadyHaveAccount")}{" "}
             <Link className="font-medium text-teal-700 hover:text-teal-800" href="/login">
-              Login
+              {t("login")}
             </Link>
           </p>
         </CardContent>
