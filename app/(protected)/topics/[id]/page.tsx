@@ -19,6 +19,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { Select } from "@/components/ui/select";
 import { db } from "@/lib/firebase";
 import { useTopics, useVocabulary } from "@/lib/firestore-hooks";
+import { displayPhonetic } from "@/lib/phonetics";
 import { formatDate, masteryLabel } from "@/lib/utils";
 import type { MasteryLevel, VocabularyItem } from "@/types";
 
@@ -160,7 +161,7 @@ export default function TopicDetailPage() {
                       <SpeakButton text={item.word} size="icon" variant="ghost" />
                     </div>
                     <p className="text-sm text-slate-500">
-                      {item.phonetic || "No phonetic"} {item.partOfSpeech ? `- ${item.partOfSpeech}` : ""}
+                      {displayPhonetic(item.word, item.phonetic) || "No phonetic"} {item.partOfSpeech ? `- ${item.partOfSpeech}` : ""}
                     </p>
                   </div>
                   <div className="flex gap-1">

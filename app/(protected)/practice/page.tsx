@@ -2,7 +2,7 @@
 
 import { addDoc, collection, doc, serverTimestamp, updateDoc, writeBatch } from "firebase/firestore";
 import { CheckCircle2, Eye, Loader2, Play, XCircle } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -19,6 +19,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { db } from "@/lib/firebase";
 import { useTopics, useVocabulary } from "@/lib/firestore-hooks";
+import { displayPhonetic } from "@/lib/phonetics";
 import { evaluateQuizAnswer, generateQuizQuestions } from "@/lib/quiz";
 import { updateVocabularyAfterAnswer } from "@/lib/spaced-repetition";
 import { quizTypeLabel } from "@/lib/utils";
@@ -430,6 +431,13 @@ function QuestionView({
   onFlashcardRating: (rating: FlashcardRating) => void;
   t: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string;
 }) {
+  const answerRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const isKeyboardQuestion = !question.options && question.questionType !== "flashcard";
+
+  useEffect(() => {
+    if (!disabled && isKeyboardQuestion) answerRef.current?.focus();
+  }, [disabled, isKeyboardQuestion, question.id]);
+
   if (question.questionType === "flashcard") {
     return (
       <div className="space-y-4">
@@ -439,7 +447,7 @@ function QuestionView({
             <p className="text-3xl font-bold text-slate-950">{question.vocabulary.word}</p>
             <SpeakButton text={question.vocabulary.word} size="icon" variant="ghost" />
           </div>
-          <p className="mt-2 text-sm text-slate-500">{question.vocabulary.phonetic}</p>
+          <p className="mt-2 text-sm text-slate-500">{displayPhonetic(question.vocabulary.word, question.vocabulary.phonetic)}</p>
         </div>
         {showBack ? (
           <div className="rounded-lg border border-teal-200 bg-teal-50 p-5">
@@ -458,7 +466,7 @@ function QuestionView({
               <SpeakButton text={question.vocabulary.word} label={t("listen")} size="sm" variant="secondary" />
             </div>
             <p className="mt-1 text-sm text-teal-800">
-              {question.vocabulary.partOfSpeech} {question.vocabulary.phonetic}
+              {question.vocabulary.partOfSpeech} {displayPhonetic(question.vocabulary.word, question.vocabulary.phonetic)}
             </p>
             <p className="mt-3 text-sm font-medium text-teal-950">{question.vocabulary.exampleEn}</p>
             <p className="mt-1 text-sm text-teal-800">{question.vocabulary.exampleVi}</p>
@@ -524,19 +532,27 @@ function QuestionView({
         <Label htmlFor="answer">{t("yourAnswer")}</Label>
         {question.questionType === "sentence-writing" ? (
           <Textarea
+            ref={answerRef as React.RefObject<HTMLTextAreaElement>}
             id="answer"
             value={inputAnswer}
             disabled={disabled}
             onChange={(event) => onInputAnswer(event.target.value)}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             placeholder={t("writeSentencePlaceholder")}
             className="min-h-28"
           />
         ) : (
           <Input
+            ref={answerRef as React.RefObject<HTMLInputElement>}
             id="answer"
             value={inputAnswer}
             disabled={disabled}
             onChange={(event) => onInputAnswer(event.target.value)}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
@@ -597,16 +613,19 @@ function FeedbackOverlay({
   t: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string;
 }) {
   const imageUrl = feedback.question.vocabulary.imageUrl;
+  const isFlashcard = feedback.question.questionType === "flashcard";
+  const title = feedbackTitle(feedback, t);
+  const memoryTip = buildMemoryTip(feedback.question.vocabulary.word, feedback.question.vocabulary.meaningVi);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
       <div
         className={`max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border bg-white shadow-soft transition ${
-          feedback.isCorrect ? "border-emerald-200" : "border-rose-200"
+          feedback.isCorrect || isFlashcard ? "border-emerald-200" : "border-rose-200"
         }`}
       >
         {imageUrl ? (
-          <div className="h-52 bg-slate-100">
+          <div className="mx-auto mt-4 h-32 w-48 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imageUrl} alt={`Illustration for ${feedback.question.vocabulary.word}`} className="h-full w-full object-cover" />
           </div>
@@ -614,16 +633,16 @@ function FeedbackOverlay({
         <div className="p-6 text-center">
           <div
             className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${
-              feedback.isCorrect ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+              feedback.isCorrect || isFlashcard ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
             }`}
           >
-            {feedback.isCorrect ? <CheckCircle2 className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
+            {feedback.isCorrect || isFlashcard ? <CheckCircle2 className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
           </div>
-          <h3 className="mt-4 text-2xl font-bold text-slate-950">{feedback.isCorrect ? t("correct") : t("notQuite")}</h3>
+          <h3 className="mt-4 text-2xl font-bold text-slate-950">{title}</h3>
           <p className="mt-2 text-sm text-slate-500">
-            {feedback.sentenceFeedback ? t("sentenceScore") : t("correctAnswer")}:{" "}
+            {feedback.sentenceFeedback ? t("sentenceScore") : isFlashcard ? t("flashcardMarked") : t("correctAnswer")}:{" "}
             <span className="font-semibold text-slate-900">
-              {feedback.sentenceFeedback ? `${feedback.sentenceFeedback.score}/100` : feedback.question.correctAnswer}
+              {feedback.sentenceFeedback ? `${feedback.sentenceFeedback.score}/100` : isFlashcard ? feedback.userAnswer : feedback.question.correctAnswer}
             </span>
           </p>
           {feedback.sentenceFeedback ? (
@@ -655,7 +674,13 @@ function FeedbackOverlay({
               <SpeakButton text={feedback.question.vocabulary.word} label={t("listen")} size="sm" variant="secondary" />
             </div>
             <p className="text-sm text-slate-600">{feedback.question.vocabulary.meaningVi}</p>
-            <p className="mt-2 text-xs text-slate-500">{feedback.question.vocabulary.partOfSpeech} {feedback.question.vocabulary.phonetic}</p>
+            <p className="mt-2 text-xs text-slate-500">
+              {feedback.question.vocabulary.partOfSpeech} {displayPhonetic(feedback.question.vocabulary.word, feedback.question.vocabulary.phonetic)}
+            </p>
+          </div>
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-left">
+            <p className="text-sm font-semibold text-amber-950">{t("memoryTip")}</p>
+            <p className="mt-1 text-sm leading-6 text-amber-900">{memoryTip}</p>
           </div>
           <Button className="mt-5 w-full" onClick={onNext} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -675,6 +700,31 @@ function ratingLabel(rating: FlashcardRating) {
     mastered: "Rất thuộc"
   };
   return labels[rating];
+}
+
+function feedbackTitle(feedback: AnswerRecord, t: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string) {
+  if (feedback.question.questionType === "flashcard") {
+    if (feedback.userAnswer === "Chưa nhớ") return t("flashcardForgotTitle");
+    if (feedback.userAnswer === "Hơi nhớ") return t("flashcardAlmostTitle");
+    if (feedback.userAnswer === "Đã nhớ") return t("flashcardRememberedTitle");
+    return t("flashcardMasteredTitle");
+  }
+
+  return feedback.isCorrect ? t("correct") : t("notQuite");
+}
+
+function buildMemoryTip(word: string, meaningVi: string) {
+  const clean = word.toLowerCase();
+  const firstLetter = clean.charAt(0).toUpperCase();
+  const visual = clean.endsWith("tion")
+    ? "hãy tưởng tượng một bảng thông báo hoặc quy trình đang diễn ra"
+    : clean.endsWith("ing")
+      ? "hãy tưởng tượng một người đang thực hiện hành động đó"
+      : clean.length > 8
+        ? "chia từ thành vài mảnh nhỏ rồi gắn mỗi mảnh với một hình ảnh"
+        : "gắn từ này với một đồ vật, địa điểm hoặc hành động bạn gặp hằng ngày";
+
+  return `Mẹo nhớ: nhìn chữ "${word}", bắt đầu bằng âm/chữ ${firstLetter}, rồi liên tưởng tới nghĩa "${meaningVi}". ${visual}. Khi gặp hình ảnh đó ngoài đời, tự đọc chậm "${word}" một lần.`;
 }
 
 function retryQuestionKey(question: LocalQuizQuestion) {

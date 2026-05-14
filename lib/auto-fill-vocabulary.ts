@@ -1,5 +1,6 @@
 import type { Difficulty, ExtractedVocabulary } from "@/types";
 import { suggestVocabularyImageUrl } from "@/lib/extract";
+import { approximatePhonetic } from "@/lib/phonetics";
 
 export function guessPartOfSpeech(word: string) {
   if (word.endsWith("tion") || word.endsWith("ment") || word.endsWith("ness") || word.endsWith("ity")) return "noun";
@@ -52,7 +53,7 @@ export async function autoFillVocabularyFields({
     word: cleanWord,
     meaningVi: resolvedMeaningVi,
     partOfSpeech: resolvedPartOfSpeech,
-    phonetic: phonetic?.trim() || `/${cleanWord}/`,
+    phonetic: phonetic?.trim() || approximatePhonetic(cleanWord),
     imageUrl: imageUrl?.trim() || suggestVocabularyImageUrl(cleanWord, resolvedPartOfSpeech),
     exampleEn: resolvedExampleEn,
     exampleVi: resolvedExampleVi,
@@ -155,7 +156,7 @@ export async function autoFillExtractedVocabulary(
       selected: Boolean(meaningVi) && !item.exists,
       meaningVi,
       partOfSpeech: item.partOfSpeech || guessPartOfSpeech(item.word),
-      phonetic: item.phonetic || `/${item.word}/`,
+      phonetic: item.phonetic || approximatePhonetic(item.word),
       imageUrl: item.imageUrl || suggestVocabularyImageUrl(item.word, item.partOfSpeech || guessPartOfSpeech(item.word)),
       exampleEn,
       exampleVi,
