@@ -6,12 +6,14 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { BookOpen, CheckCircle2, Loader2 } from "lucide-react";
+import { BookOpen, Loader2 } from "lucide-react";
+import { AuthMarketingPanel } from "@/components/auth/auth-marketing-panel";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getFirebaseErrorMessage } from "@/lib/firebase-errors";
 import { auth, db } from "@/lib/firebase";
 
 export default function RegisterPage() {
@@ -53,50 +55,30 @@ export default function RegisterPage() {
       toast.success("Account created");
       router.replace("/dashboard");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create account");
+      toast.error(getFirebaseErrorMessage(error, "Could not create account"));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="grid min-h-screen bg-slate-50 lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="hidden min-h-screen flex-col justify-between bg-slate-950 p-10 text-white lg:flex">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-teal-500">
-            <BookOpen className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xl font-bold">VocabVault</p>
-            <p className="text-sm text-slate-300">Your English vocabulary command center.</p>
-          </div>
-        </div>
-        <div className="max-w-xl">
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-teal-300">Start clean</p>
-          <h1 className="mt-4 text-5xl font-bold leading-tight tracking-tight">Make vocabulary review feel organized.</h1>
-          <p className="mt-5 text-lg leading-8 text-slate-300">
-            Sign up, create demo data, then test every workflow from extraction to flashcards in your own Firebase account.
-          </p>
-          <div className="mt-8 grid gap-3 text-sm text-slate-200">
-            {["Topic cards with progress", "Real Firestore data per user", "Quiz history and spaced repetition"].map((item) => (
-              <div key={item} className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-teal-300" />
-                {item}
-              </div>
-            ))}
-          </div>
-        </div>
-        <p className="text-sm text-slate-400">No Supabase, no admin SDK, no hardcoded user id.</p>
-      </section>
+    <main className="grid min-h-screen bg-slate-50 lg:grid-cols-[1.12fr_0.88fr]">
+      <AuthMarketingPanel mode="register" />
 
       <section className="flex items-center justify-center px-4 py-10">
       <Card className="w-full max-w-md border-slate-200 shadow-soft">
         <CardHeader>
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-md bg-teal-600 text-white">
-            <BookOpen className="h-5 w-5" />
+          <div className="mb-4 flex items-center gap-3 lg:hidden">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-950 text-white">
+              <BookOpen className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-950">VocabVault</p>
+              <p className="text-xs text-slate-500">Organized English vocabulary.</p>
+            </div>
           </div>
           <CardTitle className="text-2xl">Create your VocabVault</CardTitle>
-          <CardDescription>Each account has private topics, words, and quiz history.</CardDescription>
+          <CardDescription>Set up your private vocabulary workspace in less than a minute.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

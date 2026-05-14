@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { BookOpen, CheckCircle2, Loader2 } from "lucide-react";
+import { BookOpen, Loader2 } from "lucide-react";
+import { AuthMarketingPanel } from "@/components/auth/auth-marketing-panel";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getFirebaseErrorMessage } from "@/lib/firebase-errors";
 import { auth } from "@/lib/firebase";
 
 export default function LoginPage() {
@@ -37,51 +39,30 @@ export default function LoginPage() {
       toast.success("Welcome back");
       router.replace("/dashboard");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not login");
+      toast.error(getFirebaseErrorMessage(error, "Could not login"));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="grid min-h-screen bg-slate-50 lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="hidden min-h-screen flex-col justify-between bg-slate-950 p-10 text-white lg:flex">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-teal-500">
-            <BookOpen className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xl font-bold">VocabVault</p>
-            <p className="text-sm text-slate-300">Build your personal English memory system.</p>
-          </div>
-        </div>
-        <div className="max-w-xl">
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-teal-300">Topic-first learning</p>
-          <h1 className="mt-4 text-5xl font-bold leading-tight tracking-tight">Own every word you add.</h1>
-          <p className="mt-5 text-lg leading-8 text-slate-300">
-            Create topics, extract vocabulary from real text, practice with mixed quizzes, and let spaced repetition keep
-            weak words visible.
-          </p>
-          <div className="mt-8 grid gap-3 text-sm text-slate-200">
-            {["Private Firebase workspace", "Vietnamese answer checking with or without accents", "Progress, review queue, and weak-word drills"].map((item) => (
-              <div key={item} className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-teal-300" />
-                {item}
-              </div>
-            ))}
-          </div>
-        </div>
-        <p className="text-sm text-slate-400">Designed for IELTS, TOEIC, work, travel, and custom topics.</p>
-      </section>
+    <main className="grid min-h-screen bg-slate-50 lg:grid-cols-[1.12fr_0.88fr]">
+      <AuthMarketingPanel mode="login" />
 
       <section className="flex items-center justify-center px-4 py-10">
       <Card className="w-full max-w-md border-slate-200 shadow-soft">
         <CardHeader>
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-md bg-teal-600 text-white">
-            <BookOpen className="h-5 w-5" />
+          <div className="mb-4 flex items-center gap-3 lg:hidden">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-950 text-white">
+              <BookOpen className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-950">VocabVault</p>
+              <p className="text-xs text-slate-500">Organized English vocabulary.</p>
+            </div>
           </div>
           <CardTitle className="text-2xl">Login to VocabVault</CardTitle>
-          <CardDescription>Continue learning your English vocabulary topics.</CardDescription>
+          <CardDescription>Continue your review queue, topic practice, and progress tracking.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
