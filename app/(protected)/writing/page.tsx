@@ -15,7 +15,7 @@ const samplePrompt =
   "You recently joined an English course. Write a letter to your friend and tell him/her about the course, your teacher, and why you like it.";
 
 export default function WritingPage() {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [taskType, setTaskType] = useState<WritingTaskType>("letter");
   const [prompt, setPrompt] = useState(samplePrompt);
   const [answer, setAnswer] = useState("");
@@ -24,7 +24,7 @@ export default function WritingPage() {
   const targetHint = useMemo(() => taskType === "letter" ? t("letterTask") : t("essayTask"), [t, taskType]);
 
   function handleEvaluate() {
-    setResult(evaluateWritingTask(taskType, prompt, answer));
+    setResult(evaluateWritingTask(taskType, prompt, answer, language));
   }
 
   return (
@@ -44,7 +44,12 @@ export default function WritingPage() {
               <PenLine className="h-5 w-5 text-teal-700" />
               {t("writingPrompt")}
             </CardTitle>
-            <CardDescription>{t("requiredStructure")}: {taskType === "letter" ? "Greeting - Reason - Content - Closing" : "Introduction - Body 1 - Body 2 - Conclusion"}</CardDescription>
+            <CardDescription>
+              {t("requiredStructure")}:{" "}
+              {taskType === "letter"
+                ? language === "vi" ? "Chào - Lý do - Nội dung - Kết" : "Greeting - Reason - Content - Closing"
+                : language === "vi" ? "Mở - Thân 1 - Thân 2 - Kết" : "Introduction - Body 1 - Body 2 - Conclusion"}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">

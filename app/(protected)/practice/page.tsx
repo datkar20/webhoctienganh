@@ -134,7 +134,7 @@ export default function PracticePage() {
     if (!currentQuestion || feedback) return;
     const isFlashcard = currentQuestion.questionType === "flashcard";
     const sentenceFeedback = currentQuestion.questionType === "sentence-writing"
-      ? gradeVocabularySentence(answer, currentQuestion.vocabulary.word)
+      ? gradeVocabularySentence(answer, currentQuestion.vocabulary.word, language)
       : undefined;
     const isCorrect = isFlashcard
       ? flashcardRating !== "forgot"
