@@ -143,21 +143,60 @@ export function gradeVocabularySentence(answer: string, vocabularyWord: string, 
 
 function buildRevisedSentence(answer: string, vocabularyWord: string) {
   const normalized = answer.trim();
-  if (normalized && containsVocabularyWord(normalized, vocabularyWord) && hasVerb(normalized)) return polishSentence(normalized);
+  if (normalized) {
+    const withTargetWord = containsVocabularyWord(normalized, vocabularyWord)
+      ? normalized
+      : addVocabularyToUserSentence(normalized, vocabularyWord);
+    const withVerb = hasVerb(withTargetWord)
+      ? withTargetWord
+      : `I use ${withTargetWord}`;
+    return polishSentence(withVerb);
+  }
   return capitalizeSentence(`I can use ${vocabularyWord} correctly in a clear English sentence`);
 }
 
 function polishSentence(answer: string) {
   return capitalizeSentence(
     answer
+      .trim()
+      .replace(/\bi\b/g, "I")
+      .replace(/\bi'm\b/gi, "I'm")
+      .replace(/\bdont\b/gi, "don't")
+      .replace(/\bdoesnt\b/gi, "doesn't")
+      .replace(/\bcant\b/gi, "can't")
+      .replace(/\bwont\b/gi, "won't")
+      .replace(/\bim\b/gi, "I'm")
       .replace(/\bi am agree\b/gi, "I agree")
       .replace(/\bpeople is\b/gi, "people are")
+      .replace(/\bthere is many\b/gi, "there are many")
+      .replace(/\bthere are a\b/gi, "there is a")
       .replace(/\bhe go\b/gi, "he goes")
       .replace(/\bshe go\b/gi, "she goes")
       .replace(/\bit go\b/gi, "it goes")
+      .replace(/\bhe have\b/gi, "he has")
+      .replace(/\bshe have\b/gi, "she has")
+      .replace(/\bit have\b/gi, "it has")
+      .replace(/\bvery like\b/gi, "really like")
+      .replace(/\bdiscuss about\b/gi, "discuss")
+      .replace(/\bexplain about\b/gi, "explain")
       .replace(/\ba ([aeiou])/gi, "an $1")
       .replace(/\s+/g, " ")
   );
+}
+
+function addVocabularyToUserSentence(answer: string, vocabularyWord: string) {
+  const sentence = answer.replace(/[.!?]\s*$/, "").trim();
+  if (!sentence) return `I can use ${vocabularyWord} correctly`;
+
+  if (/\b(is|are|was|were|seems|looks|becomes)\b/i.test(sentence)) {
+    return `${sentence}, especially the idea of ${vocabularyWord}`;
+  }
+
+  if (/\b(can|should|will|would|could|must|need to|want to)\b/i.test(sentence)) {
+    return `${sentence} by using ${vocabularyWord}`;
+  }
+
+  return `${sentence}, and this connects to ${vocabularyWord}`;
 }
 
 function buildEverydayExamples(vocabularyWord: string, answer: string) {
